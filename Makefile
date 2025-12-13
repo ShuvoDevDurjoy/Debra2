@@ -1,52 +1,48 @@
-# Use g++ for compiling C++ code and gcc for C code
+# Compiler
 CXX = g++
-CC = gcc
+CC  = gcc
 
+# Flags
 CXXFLAGS = -Wall -std=c++20 -O2
-CFLAGS = -Wall -O2
+CFLAGS   = -Wall -O2
 
-#lflags
+# Platform-specific linker flags
 ifeq ($(OS),Windows_NT)
     LDFLAGS = -lglfw3dll -lgdi32 -lopengl32 -luser32 -lkernel32 -lwinmm
 else
-    LDFLAGS = -lglfw -lGL -lpthread -ldl
+    LDFLAGS = -lglfw -lGL -lpthread -ldl -lfreetype
 endif
 
+# Directories
+INCLUDE_DIRS = -Iinclude -I/usr/include/freetype2
+OBJ_DIR      = build
+SRC_DIR      = src
+LIB_DIR      = include/lib
+GLAD_SRC     = include/glad.c
+OUTPUT       = graph
 
-# Path to the glfw libraries
-LIB_DIR = include/lib
-
-# Path to the include directories of glfw and glew
-INCLUDE_DIR = include
-
-# Add glad.c file for GLAD (for OpenGL loader)
-GLAD_SRC = include/glad.c
+# Find all cpp files recursively
+SRC = $(shell find $(SRC_DIR) -name "*.cpp")
+OBJ = $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(SRC))
 GLAD_OBJ = $(OBJ_DIR)/glad.o
 
-# Name of the output executable
-OUTPUT = graph
-
-# Source files and object files
-OBJ_DIR = obj
-SRC_DIR = src
-SRC = $(wildcard $(SRC_DIR)/*.cpp)
-OBJ = $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(SRC))
-
+# Default target
 all: $(OUTPUT)
 
-# Linking final executable
+# Linking
 $(OUTPUT): $(OBJ) $(GLAD_OBJ)
 	$(CXX) $(CXXFLAGS) -o $@ $^ -L $(LIB_DIR) $(LDFLAGS)
 
-# Compiling C++ source files with g++
+# Compile C++ source files
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp | $(OBJ_DIR)
-	$(CXX) $(CXXFLAGS) -c -o $@ $< -I $(INCLUDE_DIR)
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -c -o $@ $< $(INCLUDE_DIRS)
 
-# Compiling GLAD (C file) with gcc
+# Compile GLAD
 $(GLAD_OBJ): $(GLAD_SRC) | $(OBJ_DIR)
-	$(CC) $(CFLAGS) -c -o $@ $< -I $(INCLUDE_DIR)
+	$(CC) $(CFLAGS) -c -o $@ $< $(INCLUDE_DIRS)
 
-# Create obj directory if it doesn't exist
+# Ensure build directory exists
 $(OBJ_DIR):
 	mkdir -p $(OBJ_DIR)
 
@@ -58,12 +54,9 @@ debug: clean all
 clean:
 	@echo Cleaning...
 ifeq ($(OS),Windows_NT)
-	@if exist $(OBJ_DIR) ( \
-		for %%f in ($(OBJ_DIR)\*.o) do del /q "%%f" \
-	)
-	@if exist $(GLAD_OBJ) del /q "$(GLAD_OBJ)"
-	@if exist $(OUTPUT).exe del /q "$(OUTPUT).exe"
+	@if exist $(OBJ_DIR) rmdir /s /q $(OBJ_DIR)
+	@if exist $(OUTPUT).exe del /q $(OUTPUT).exe
 else
-	@rm -f $(OBJ_DIR)/*.o $(GLAD_OBJ) $(OUTPUT)
+	@rm -rf $(OBJ_DIR) $(OUTPUT)
 endif
-	@echo cleaned...
+	@echo Cleaned!
