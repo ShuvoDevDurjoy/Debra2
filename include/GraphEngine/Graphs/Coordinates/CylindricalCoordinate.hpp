@@ -43,6 +43,14 @@ public:
         phi_end = phi.second;
     }
 
+    void setResolutionR(float r){
+        resolutionX = r;
+    }
+
+    void setResolutionPhi(float phi){
+        resolutionY = phi;
+    }
+
     Surface *drawSurface(Vec3 (*func)(float, float, Var), Var v);
 };
 

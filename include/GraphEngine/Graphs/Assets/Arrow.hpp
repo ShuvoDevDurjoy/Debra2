@@ -1,21 +1,20 @@
-#ifndef __SURFACE_HPP__
-#define __SURFACE_HPP__
+#ifndef __ARROW_HPP__
+#define __ARROW_HPP__
 
-#include "GraphObject.hpp"
-#include "../Core/Shader.hpp"
-#include "../Core/GraphApp.hpp"
-#include "../Math/Vec3.hpp"
+#include "../GraphObject.hpp"
+#include "../../../Event/MouseEvents.hpp"
+#include "../../../Event/KeyClicked.hpp"
+#include "../../Core/Shader.hpp"
+#include "../../Core/GraphApp.hpp"
+#include "../../Math/Vec3.hpp"
 #include <vector>
 #include <iostream>
-#include "../../glad.h"
-#include "../../glm/glm.hpp"
-#include "../../glm/gtc/matrix_transform.hpp"
-#include "../../Event/MouseEvents.hpp"
-#include "../../Event/KeyClicked.hpp"
+#include "../../../glad.h"
+#include "../../../glm/glm.hpp"
+#include "../../../glm/gtc/matrix_transform.hpp"
 #include <random>
 
-
-class Surface : public singletonGraph, public MouseEvents, public KeyClicked
+class Arrow3D : public singletonGraph, public KeyClicked, public MouseEvents
 {
 private:
     std::string vertexShaderPath = "./shaders/surface_shaders/vertex.vs";
@@ -37,12 +36,19 @@ public:
     glm::mat4 projection = glm::mat4(1.0f);
 
     Vec3 cameraPos = Vec3(0.0f, 20.0f, 50.0f);
+private: 
+    Vec3 start;
+    Vec3 end;
+    
 
 public:
-    Surface();
+    Arrow3D();
 
-    ~Surface()
-    {
+    Arrow3D(Vec3 start, Vec3 end);
+
+    void generate();
+
+    ~Arrow3D(){
         if (shader)
             delete shader;
         if (VAO)
@@ -53,7 +59,13 @@ public:
 
     void onMouseMoveCallback(MouseEvent) override;
     void onKeyPressedOnceCallback(const KeyEvent &event) override;
-    void onMouseClickCallback(MouseEvent) override{};
+    void onMouseClickCallback(MouseEvent) override{}
+
+    std::vector<float>& getPoints(){
+        return points;
+    }
+
+    void init() override;
 
     // Override draw to accept tick parameter
     void draw(float tick) override
@@ -61,11 +73,6 @@ public:
         drawTick(tick);
     }
 
-    void init() override;
-
-    glm::vec3 randomUnitVector();
-
-    // Core draw function for 3D surfaces
     void drawTick(float tick);
 };
 

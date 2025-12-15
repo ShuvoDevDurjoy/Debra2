@@ -133,8 +133,8 @@ private:
 private:
     // contains the position vector for the grid lines(the axis) and the box(around the whole window)
     // std::vector<float> gridLines;
-    singletonGraph gridLines;
-    singletonGraph boxVerticess;
+    // singletonGraph gridLines;
+    // singletonGraph boxVerticess;
 
     std::vector<singletonGraph*> graphs;
 

@@ -1,5 +1,5 @@
-#ifndef __SURFACE_HPP__
-#define __SURFACE_HPP__
+#ifndef __CARTESIANGRAPH_HPP__
+#define __CARTESIANGRAPH_HPP__
 
 #include "GraphObject.hpp"
 #include "../Core/Shader.hpp"
@@ -14,12 +14,13 @@
 #include "../../Event/KeyClicked.hpp"
 #include <random>
 
-
-class Surface : public singletonGraph, public MouseEvents, public KeyClicked
+class CartesianGraph : public singletonGraph, public MouseEvents, public KeyClicked
 {
+
 private:
     std::string vertexShaderPath = "./shaders/surface_shaders/vertex.vs";
     std::string fragmentShaderPath = "./shaders/surface_shaders/fragment.fs";
+    std::string geometricShaderPath = "./shaders/surface_shaders/geometry.gs";
 
     GraphColor color;
 
@@ -39,9 +40,9 @@ public:
     Vec3 cameraPos = Vec3(0.0f, 20.0f, 50.0f);
 
 public:
-    Surface();
+    CartesianGraph();
 
-    ~Surface()
+    ~CartesianGraph()
     {
         if (shader)
             delete shader;
@@ -53,17 +54,15 @@ public:
 
     void onMouseMoveCallback(MouseEvent) override;
     void onKeyPressedOnceCallback(const KeyEvent &event) override;
-    void onMouseClickCallback(MouseEvent) override{};
+    void onMouseClickCallback(MouseEvent) override{}
 
     // Override draw to accept tick parameter
-    void draw(float tick) override
-    {
-        drawTick(tick);
-    }
+    void draw(float tick) override;
 
     void init() override;
 
     glm::vec3 randomUnitVector();
+
 
     // Core draw function for 3D surfaces
     void drawTick(float tick);

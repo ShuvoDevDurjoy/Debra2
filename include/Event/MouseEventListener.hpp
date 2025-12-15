@@ -14,15 +14,19 @@ class MouseEventListener{
         }
     
 
-        void pullAll(GLFWwindow* window){
-            double xpos = 0, ypos = 0;
+        void mouseMoved(GLFWwindow* window, double xpos, double ypos){
             int width = 0, height = 0;
             glfwGetWindowSize(window, &width, &height);
             glfwGetCursorPos(window, &xpos, &ypos);
-
             for (MouseEvents *listener : listeners)
             {
                 listener->onMouseMoved(xpos, ypos, width, height);
+            }
+        }
+
+        void mouseClicked(GLFWwindow* window, int key, int action, int mode){
+            for(MouseEvents *listener : listeners){
+                listener->onMouseClick(key, action, mode);
             }
         }
 };

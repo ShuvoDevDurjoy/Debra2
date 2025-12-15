@@ -84,6 +84,18 @@ void GraphApp::frame_buffer_size_callback(GLFWwindow *window, int w, int h)
     glViewport(0, 0, w, h);
 }
 
+void GraphApp::mouseMoveCallback(GLFWwindow* window, double xpos, double ypos){
+    mouseEventMangager->mouseMoved(window, xpos, ypos);
+}
+
+void GraphApp::keyClickCallback(GLFWwindow* window, int key, int scancode, int action, int mode){
+    keyManager->pollAll(window, key, scancode, action, mode);
+}
+
+void GraphApp::mouseClickCallback(GLFWwindow *window, int button, int action, int mode){
+    mouseEventMangager->mouseClicked(window, button, action, mode);
+}
+
 void GraphApp::process_input()
 {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
@@ -93,6 +105,9 @@ void GraphApp::setCallback()
 {
     // callback for frame buffer size
     glfwSetFramebufferSizeCallback(window, frame_buffer_size_callback);
+    glfwSetCursorPosCallback(window, mouseMoveCallback);
+    glfwSetKeyCallback(window, keyClickCallback);
+    glfwSetMouseButtonCallback(window, mouseClickCallback);
 }
 
 void GraphApp::mainLoop(Graph *graph)
@@ -112,9 +127,6 @@ void GraphApp::mainLoop(Graph *graph)
 
         glClearColor(0.12f, 0.13f, 0.25f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        keyManager->pollAll(window);
-        mouseEventMangager->pullAll(window);
 
         shader->use();
         graph->draw(deltaTime); // use interpolated positions

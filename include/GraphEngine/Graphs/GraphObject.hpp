@@ -25,6 +25,12 @@ private:
     std::vector<float> morphStart;
     std::vector<float> morphEnd;
     int rangeSize = 0;
+
+protected:
+    GLuint VAO = 0, VBO = 0, MBO = 0;
+    bool remove_after_draw = true;
+    std::vector<float> points;
+    Shader *shader = nullptr;
     float startTime = 0;
     float duration = 1.0f;
     float delay = 1.0f;
@@ -32,12 +38,6 @@ private:
     float morphStartTime = 5.0f;
     float morphDelay = 1.0f;
     float morphDuration = 3.0f;
-    bool remove_after_draw = true;
-    
-    protected:
-    GLuint VAO = 0, VBO = 0, MBO = 0;
-    std::vector<float> points;
-    Shader *shader = nullptr;
 
     int drawVertices = 0;
 
@@ -143,6 +143,18 @@ public:
         points.push_back(p.second);
     }
 
+    void add(float x)
+    {
+        points.push_back(x);
+    }
+
+    void add(glm::vec3 v)
+    {
+        points.push_back(v[0]);
+        points.push_back(v[1]);
+        points.push_back(v[2]);
+    }
+
     void add(Vec3 vec)
     {
         points.push_back(vec.x);
@@ -175,7 +187,7 @@ public:
     float getMorphDuration() { return hasMorph() ? this->morphDuration : 0; }
     float getTotalDuration() { return getDuration() + getMorphDuration() + this->delay; }
 
-    virtual void draw(float tick);
+    virtual void draw(float tick) = 0;
 
-    virtual void draw();
+    virtual void drawTick(float tick) = 0;
 };

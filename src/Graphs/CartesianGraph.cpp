@@ -1,10 +1,10 @@
-#include "../../include/GraphEngine/Graphs/Surface.hpp"
+#include "../../include/GraphEngine/Graphs/CartesianGraph.hpp"
 
-Surface::Surface()
+CartesianGraph::CartesianGraph()
 {
     this->shader = new Shader(vertexShaderPath, fragmentShaderPath);
 
-    // rotationAxis = randomUnitVector();
+    rotationAxis = randomUnitVector();
     rotationSpeed = glm::radians(2.0f); // 20° per second
     startTime = glfwGetTime();
 
@@ -29,8 +29,7 @@ Surface::Surface()
     (GraphApp::keyManager)->registerListener(this);
 }
 
-// Initialize VAO, VBO and upload points
-void Surface::init()
+void CartesianGraph::init()
 {
     if (getSize() == 0) // Corrected the check
     {
@@ -56,17 +55,18 @@ void Surface::init()
     // Vertex layout: 3 floats per vertex (x, y, z)
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)0);
     glEnableVertexAttribArray(0);
-
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 
+    remove_after_draw = false;
+
     initialized = true;
 }
 
-void Surface::drawTick(float tick)
+void CartesianGraph::draw(float tick)
 {
     if (!initialized)
     {
@@ -77,25 +77,57 @@ void Surface::drawTick(float tick)
         return;
 
     shader->use();
+
+    view = glm::lookAt(
+        glm::vec3(cameraPos.x, cameraPos.y, cameraPos.z),
+        glm::vec3(0.0f, 0.0f, 0.0f),
+        glm::vec3(0.0f, 1.0f, 1.0f));
+
     // Pass the matrices to the shader
     shader->setMat4("model", model);
     shader->setMat4("view", view);
     shader->setMat4("projection", projection);
 
     shader->setVec3("objectColor", color.RED, color.GREEN, color.BLUE);
-    shader->setVec3("lightPos", cameraPos.x, cameraPos.y, cameraPos.z);
+    shader->setVec3("lightPos", cameraPos.x, cameraPos.y, cameraPos.z + 100);
     shader->setVec3("viewPos", cameraPos.x, cameraPos.y, cameraPos.z);
     shader->setVec3("lightColor", 1.0f, 0.2f, 0.5f);
 
+    if (tick < startTime)
+        return;
+
+    drawVertices = points.size() / 6;
     glBindVertexArray(VAO);
+    if (tick >= startTime && tick < (startTime + duration))
+    {
+        // Compute drawing progress
+        float progress = float(tick - startTime) / float(duration);
+        progress = std::clamp(progress, 0.0f, 1.0f);
 
-    // Draw triangles (assumes points are arranged for triangle mesh)
-    glDrawArrays(GL_TRIANGLES, 0, getSize() / 3);
+        // Number of vertices to draw
+        drawVertices = int(progress * drawVertices);
+        // std::cout << "initializing: " << drawVertices << std::endl;
 
-    glBindVertexArray(0);
+        if (drawVertices <= 1)
+            return; // avoids GL crash on LINE_STRIP
+
+        drawTick(tick);
+    }
+    else
+    {
+        if (!remove_after_draw)
+        {
+            drawTick(tick);
+        }
+    }
 }
 
-glm::vec3 Surface::randomUnitVector()
+void CartesianGraph::drawTick(float tick)
+{
+    glDrawArrays(GL_LINE_STRIP, 0, drawVertices);
+}
+
+glm::vec3 CartesianGraph::randomUnitVector()
 {
     static std::mt19937 rng(std::random_device{}());
     static std::uniform_real_distribution<float> dist(-1.0f, 1.0f);
@@ -104,7 +136,7 @@ glm::vec3 Surface::randomUnitVector()
     return glm::normalize(v);
 }
 
-void Surface::onMouseMoveCallback(MouseEvent event)
+void CartesianGraph::onMouseMoveCallback(MouseEvent event)
 {
     if (event.key == GLFW_MOUSE_BUTTON_LEFT && event.action == GLFW_PRESS)
     {
@@ -144,13 +176,26 @@ void Surface::onMouseMoveCallback(MouseEvent event)
     }
 }
 
-void Surface::onKeyPressedOnceCallback(const KeyEvent &event){
-    if(event.key == GLFW_KEY_F && cameraPos.z > 0){
+void CartesianGraph::onKeyPressedOnceCallback(const KeyEvent &event)
+{
+    if (event.key == GLFW_KEY_F && cameraPos.z > 0)
+    {
         cameraPos.z -= 5.0f;
     }
-    else if(event.key == GLFW_KEY_B){
+    else if (event.key == GLFW_KEY_B)
+    {
         cameraPos.z += 5.0f;
     }
-
-
+    else if(event.key == GLFW_KEY_UP){
+        cameraPos.y += 5.0f;
+    }
+    else if(event.key == GLFW_KEY_DOWN){
+        cameraPos.y -= 5.0f;
+    }
+    else if(event.key == GLFW_KEY_LEFT){
+        cameraPos.x -= 5.0f;
+    }
+    else if(event.key == GLFW_KEY_R){
+        cameraPos.x += 5.0f;
+    }
 }

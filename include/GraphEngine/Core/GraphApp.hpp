@@ -45,6 +45,10 @@ private:
 
     void LoadFont(const std::string &path);
 
+    static void mouseMoveCallback(GLFWwindow* window, double xpos, double ypos);
+    static void keyClickCallback(GLFWwindow* window, int key, int scancode, int action, int mode);
+    static void mouseClickCallback(GLFWwindow *window, int button, int action, int mode);
+
 public:
     GraphApp();
     ~GraphApp() {};

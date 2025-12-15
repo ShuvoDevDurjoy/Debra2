@@ -16,7 +16,7 @@ public:
         listeners.push_back(keyclicked);
     }
 
-    void pollAll(GLFWwindow *window)
+    void pollAll(GLFWwindow *window, int key, int scancode, int action, int mode)
     {
         for (KeyClicked *k : listeners)
         {

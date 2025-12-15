@@ -4,20 +4,17 @@ Surface *CylindricalCoordinate::drawSurface(Vec3 (*func)(float, float, Var), Var
 {
     Surface *surface = new Surface();
 
-    resolutionY = 100;
-    resolutionX = 100;
-
     float step_r = (outer_radius - inner_radius) / (resolutionX - 1);
     float step_phi = (phi_end - phi_start) / (resolutionY - 1);
 
-    std::vector<Vec3> grid(resolutionX * resolutionY);
+    std::vector<Vec3> grid((resolutionX + 1) * (resolutionY + 1));
 
     // Build grid of points
-    for (int i = 0; i < resolutionX; i++)
+    for (int i = 0; i <= resolutionX; i++)
     {
         float r = inner_radius + i * step_r;
 
-        for (int j = 0; j < resolutionY; j++)
+        for (int j = 0; j <= resolutionY; j++)
         {
             float phi = phi_start + j * step_phi;
             grid[i * resolutionY + j] = func(r, phi, v);
@@ -25,9 +22,9 @@ Surface *CylindricalCoordinate::drawSurface(Vec3 (*func)(float, float, Var), Var
     }
 
     // Generate triangle mesh
-    for (int i = 0; i < resolutionX - 1; i++)
+    for (int i = 0; i <= resolutionX - 1; i++)
     {
-        for (int j = 0; j < resolutionY - 1; j++)
+        for (int j = 0; j <= resolutionY - 1; j++)
         {
             Vec3 A = grid[i * resolutionY + j];
             Vec3 B = grid[(i + 1) * resolutionY + j];
