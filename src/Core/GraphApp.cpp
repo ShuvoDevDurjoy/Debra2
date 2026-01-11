@@ -1,13 +1,18 @@
 #include "../../include/GraphEngine/Core/GraphApp.hpp"
 
-KeyEventManager* GraphApp::keyManager;
+KeyEventManager *GraphApp::keyManager;
 MouseEventListener *GraphApp::mouseEventMangager;
+glm::mat4 GraphApp::view, GraphApp::projection;
+glm::vec3 GraphApp::cameraPos;
+float GraphApp::lastX = 0, GraphApp::lastY = 0, GraphApp::rotX = 0, GraphApp::rotY = 0;
 
 GraphApp::GraphApp()
 {
     InitWindow();
     loadGLAD();
     InitTextRenderer();
+    window_width = 600;
+    window_height = 400;
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
     shader = new Shader(vertex_shader_file, fragment_shader_file);
@@ -16,6 +21,9 @@ GraphApp::GraphApp()
 
     keyManager = new KeyEventManager();
     mouseEventMangager = new MouseEventListener();
+
+    keyManager->registerListener(this);
+    mouseEventMangager->registerListener(this);
 }
 
 int GraphApp::InitWindow()
@@ -23,10 +31,12 @@ int GraphApp::InitWindow()
     // initialize glfw
     glfwInit();
 
-#ifdef _WIN32
+    // glEnable(GL_MULTISAMPLE);
+
+    // #ifdef _WIN32
     // Enable MSAA (multi-sample anti-aliasing) only on Windows
-    glfwWindowHint(GLFW_SAMPLES, 16);
-#endif
+    // glfwWindowHint(GLFW_SAMPLES, 4);
+// #endif
     // define window hints
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -35,6 +45,19 @@ int GraphApp::InitWindow()
 
     // create window
     window = glfwCreateWindow(window_width, window_height, "Shuvo Dev Durjoy", nullptr, nullptr);
+
+    cameraPos = glm::vec3(0.0f, 0.0f, 120.0f);
+    view = glm::lookAt(
+        glm::vec3(cameraPos[0], cameraPos[1], cameraPos[2]),
+        glm::vec3(0.0f, 0.0f, 0.0f),
+        glm::vec3(0.0f, 1.0f, 0.0f));
+
+    // Projection
+    projection = glm::perspective(
+        glm::radians(45.0f),
+        (window_width / window_height) * 1.0f, // replace with window ratio if needed
+        0.1f,
+        500.0f);
 
     // check if the window is created successfully or return out of the programe terminating the glfw
     if (!window)
@@ -84,15 +107,18 @@ void GraphApp::frame_buffer_size_callback(GLFWwindow *window, int w, int h)
     glViewport(0, 0, w, h);
 }
 
-void GraphApp::mouseMoveCallback(GLFWwindow* window, double xpos, double ypos){
+void GraphApp::mouseMoveCallback(GLFWwindow *window, double xpos, double ypos)
+{
     mouseEventMangager->mouseMoved(window, xpos, ypos);
 }
 
-void GraphApp::keyClickCallback(GLFWwindow* window, int key, int scancode, int action, int mode){
+void GraphApp::keyClickCallback(GLFWwindow *window, int key, int scancode, int action, int mode)
+{
     keyManager->pollAll(window, key, scancode, action, mode);
 }
 
-void GraphApp::mouseClickCallback(GLFWwindow *window, int button, int action, int mode){
+void GraphApp::mouseClickCallback(GLFWwindow *window, int button, int action, int mode)
+{
     mouseEventMangager->mouseClicked(window, button, action, mode);
 }
 
@@ -110,13 +136,14 @@ void GraphApp::setCallback()
     glfwSetMouseButtonCallback(window, mouseClickCallback);
 }
 
+bool GraphApp::isAlive = true;
+
 void GraphApp::mainLoop(Graph *graph)
 {
     glfwSwapInterval(1); // Enable V-Sync
-    glEnable(GL_DEPTH_TEST);
+    // glEnable(GL_DEPTH_TEST);
     double lastFrameTime = glfwGetTime();
     graph->InitGraphs();
-
 
     while (!glfwWindowShouldClose(window))
     {
@@ -125,10 +152,9 @@ void GraphApp::mainLoop(Graph *graph)
 
         process_input();
 
-        glClearColor(0.12f, 0.13f, 0.25f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        shader->use();
+        glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+        
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
         graph->draw(deltaTime); // use interpolated positions
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -165,4 +191,74 @@ void GraphApp::run(Graph *graph)
 {
     mainLoop(graph);
     cleanUp(graph);
+}
+
+void GraphApp::onMouseMoveCallback(MouseEvent event) 
+{
+    if (event.key == GLFW_MOUSE_BUTTON_LEFT && event.action == GLFW_PRESS)
+    {
+        // First click initialization
+        if (lastX < 0 || lastY < 0)
+        {
+            lastX = event.positionX;
+            lastY = event.positionY;
+            return;
+        }
+
+        float dx = event.positionX - lastX;
+        float dy = event.positionY - lastY;
+
+        lastX = event.positionX;
+        lastY = event.positionY;
+
+        // Map full screen drag → full rotation
+        float rotPerPixelX = 360.0f / event.windowHeight;
+        float rotPerPixelY = 360.0f / event.windowWidth;
+
+        rotX += dy * rotPerPixelX; // vertical drag → X axis
+        rotY += dx * rotPerPixelY; // horizontal drag → Y axis
+
+        // Optional: keep values bounded
+        rotX = fmod(rotX, 360.0f);
+        rotY = fmod(rotY, 360.0f);
+
+    }
+    else
+    {
+        lastX = -1;
+        lastY = -1;
+    }
+}
+
+void GraphApp::onKeyPressedOnceCallback(const KeyEvent &event)
+{
+    if (event.key == GLFW_KEY_F && cameraPos.z > 0)
+    {
+        cameraPos.z -= 5.0f;
+    }
+    else if (event.key == GLFW_KEY_B)
+    {
+        cameraPos.z += 5.0f;
+    }
+    else if (event.key == GLFW_KEY_UP)
+    {
+        cameraPos.y += 5.0f;
+    }
+    else if (event.key == GLFW_KEY_DOWN)
+    {
+        cameraPos.y -= 5.0f;
+    }
+    else if (event.key == GLFW_KEY_LEFT)
+    {
+        cameraPos.x -= 5.0f;
+    }
+    else if (event.key == GLFW_KEY_R)
+    {
+        cameraPos.x += 5.0f;
+    }
+
+    view = glm::lookAt(
+        glm::vec3(cameraPos[0], cameraPos[1], cameraPos[2]),
+        glm::vec3(0.0f, 0.0f, 0.0f),
+        glm::vec3(0.0f, 1.0f, 0.0f));
 }

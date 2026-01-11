@@ -3,7 +3,7 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
-#include <variant>
+// #include <variant>
 #include "../include/glad.h"
 #include "../include/glfw3.h"
 #include "../Core/Shader.hpp"
@@ -14,10 +14,17 @@
 #include "../Core/GraphApp.hpp"
 #include "../Rendering/Font.hpp"
 #include "../Math/Var.hpp"
+#include "./GraphObjects/GraphMathObject.hpp"
+#include "./GraphObjects/GraphObject.hpp"
+#include "../Animations/Animation.hpp"
+#include "../Animations/AnimationManager.hpp"
 
+class Animation;
 class GraphApp;
 
 class Graph;
+
+class GraphObject;
 
 // parametric object for parametric curve
 struct parametricObject
@@ -36,13 +43,13 @@ struct parametricObject
 
 // variant that let the user to input both (float) or (float, Var) function reference
 // for cartesian curve
-using CartisanFunctionTypeVariant = std::variant<float (*)(float), float (*)(float, Var)>;
+// using CartisanFunctionTypeVariant = std::variant<float (*)(float), float (*)(float, Var)>;
 // variant that let the user to input both (float) or (float, Var) function reference
 // for Polar curve
-using RadianFunctionTypeVariant = std::variant<float (*)(float), float (*)(float, Var)>;
+// using RadianFunctionTypeVariant = std::variant<float (*)(float), float (*)(float, Var)>;
 // variant that let the user to input both (float) or (float, Var) function reference
 // for Parametric curve
-using ParametricFunctionTypeVariant = std::variant<std::pair<float, float> (*)(float), std::pair<float, float> (*)(float, Var)>;
+// using ParametricFunctionTypeVariant = std::variant<std::pair<float, float> (*)(float), std::pair<float, float> (*)(float, Var)>;
 
 struct Ticks
 {
@@ -52,42 +59,42 @@ struct Ticks
 
 // Structure to convert Cartisian Function to Cartisain Type Variant
 // which convert initializer_list to CartesianFunctionTypeVariant
-struct CartesianFunctionList
-{
-private:
-    std::vector<CartisanFunctionTypeVariant> funcs;
-    friend class Graph;
+// struct CartesianFunctionList
+// {
+// private:
+//     std::vector<CartisanFunctionTypeVariant> funcs;
+//     friend class Graph;
 
-public:
-    template <typename... Fns>
-    CartesianFunctionList(Fns... fns) : funcs{CartisanFunctionTypeVariant(fns)...} {}
-};
+// public:
+//     template <typename... Fns>
+//     CartesianFunctionList(Fns... fns) : funcs{CartisanFunctionTypeVariant(fns)...} {}
+// };
 
 // Structure to convert Radian Function to Radian Type Variant
 // which convert initializer_list to RadianFunctionTypeVariant
-struct RadianFunctionList
-{
-private:
-    std::vector<RadianFunctionTypeVariant> funcs;
-    friend class Graph;
+// struct RadianFunctionList
+// {
+// private:
+//     std::vector<RadianFunctionTypeVariant> funcs;
+//     friend class Graph;
 
-public:
-    template <typename... Fns>
-    RadianFunctionList(Fns... fns) : funcs{RadianFunctionTypeVariant(fns)...} {}
-};
+// public:
+//     template <typename... Fns>
+//     RadianFunctionList(Fns... fns) : funcs{RadianFunctionTypeVariant(fns)...} {}
+// };
 
 // Structure to convert Parametric Function to Parametric Type Variant
 // which convert initializer_list to ParametricFunctionTypeVariant
-struct ParametricFunctionList
-{
-private:
-    std::vector<RadianFunctionTypeVariant> funcs;
-    friend class Graph;
+// struct ParametricFunctionList
+// {
+// private:
+//     std::vector<RadianFunctionTypeVariant> funcs;
+//     friend class Graph;
 
-public:
-    template <typename... Fns>
-    ParametricFunctionList(Fns... fns) : funcs{ParametricFunctionTypeVariant(fns)...} {}
-};
+// public:
+//     template <typename... Fns>
+//     ParametricFunctionList(Fns... fns) : funcs{ParametricFunctionTypeVariant(fns)...} {}
+// };
 
 namespace GraphUtilities
 {
@@ -117,6 +124,7 @@ namespace GraphUtilities
 #include "../Utils/GraphColor.hpp"
 #include "../Utils/AnimationMode.hpp"
 
+
 class Graph : public KeyClicked
 {
 private:
@@ -136,7 +144,8 @@ private:
     // singletonGraph gridLines;
     // singletonGraph boxVerticess;
 
-    std::vector<singletonGraph*> graphs;
+    std::vector<GraphMathObject*> graphs;
+    std::vector<Animation*> animations;
 
     std::vector<float> allPoints;
 
@@ -203,12 +212,7 @@ private:
 
     // GLuint VAO, VBO;
 
-    void InitGraphs()
-    {
-        for(singletonGraph* graph: graphs){
-            graph->init();
-        }
-    }
+    void InitGraphs();
     void drawBox();
     void drawAxis();
 
@@ -233,20 +237,20 @@ public:
 
     static Graph *getInstance(float = 0.0f);
 
-    template <typename... T>
-    singletonGraph* insertVertices(CartisanFunctionTypeVariant, T...);
-    template <typename... T>
-    void insertVerticesList(CartesianFunctionList, T...);
-    template <typename... T>
-    singletonGraph* insertVerticesRadians(RadianFunctionTypeVariant, float = 0.0f, float = 2.0f, T...);
-    template <typename... T>
-    void insertVerticesRadiansList(RadianFunctionList, float = 0.0f, float = 2.0f, T...);
-    template <typename... T>
-    singletonGraph* insertVerticesParametric(ParametricFunctionTypeVariant, float = 0.0f, float = 4.0f, T...);
-    template <typename... T>
-    void insertVerticesParametricList(ParametricFunctionList, float = 0.0f, float = 4.0f, T...);
-    void drawLines(std::vector<std::pair<float, float>>, GraphColor *graph_color = new GraphColor());
-    void drawPoints(float, float, float = 0.5f, GraphColor * = new GraphColor());
+    // template <typename... T>
+    // singletonGraph* insertVertices(CartisanFunctionTypeVariant, T...);
+    // template <typename... T>
+    // void insertVerticesList(CartesianFunctionList, T...);
+    // template <typename... T>
+    // singletonGraph* insertVerticesRadians(RadianFunctionTypeVariant, float = 0.0f, float = 2.0f, T...);
+    // template <typename... T>
+    // void insertVerticesRadiansList(RadianFunctionList, float = 0.0f, float = 2.0f, T...);
+    // template <typename... T>
+    // singletonGraph* insertVerticesParametric(ParametricFunctionTypeVariant, float = 0.0f, float = 4.0f, T...);
+    // template <typename... T>
+    // void insertVerticesParametricList(ParametricFunctionList, float = 0.0f, float = 4.0f, T...);
+    // void drawLines(std::vector<std::pair<float, float>>, GraphColor *graph_color = new GraphColor());
+    // void drawPoints(float, float, float = 0.5f, GraphColor * = new GraphColor());
 
     void morph(int, int);
 
@@ -279,7 +283,12 @@ public:
         this->morphDuration = t;
     }
 
-    void play(singletonGraph* graph){
+    void play(Animation *animation){
+        animations.push_back(animation);
+    }
+
+    void play(GraphMathObject *graph)
+    {
         graphs.push_back(graph);
     }
 };

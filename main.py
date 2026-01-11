@@ -1,37 +1,33 @@
 from manim import *
 import numpy as np
 
-class HollowParabola(ThreeDScene):
+class MyScene(Scene):
     def construct(self):
-        self.set_camera_orientation(phi= 2 * DEGREES, theta=90 * DEGREES)
-
-        # Parameters
-        r_min = 0.4
-        r_max = 5.0
-        resolution = 32
-
-        # Single parametric function for both positive and negative z
-        def hollow_paraboloid(u, v):
-            # u ranges from -1 to 1
-            r = r_min + (r_max - r_min) * abs(u)  # radial distance is always positive
-            theta = 2 * np.pi * v
-            x = r * np.cos(theta)
-            y = r * np.sin(theta)
-            z = (r**2) * np.sign(u)  # z positive if u>0, negative if u<0
-            return np.array([x, y, z])
-
-        # Create the surface
-        surface = Surface(
-            hollow_paraboloid,
-            u_range=[-1, 1],
-            v_range=[0, 1],
-            resolution=(resolution, resolution),
-            fill_opacity=0.7,
-            checkerboard_colors=[BLUE_D, BLUE_E]
+        axes = Axes(
+            x_range=[-4, 4],
+            y_range=[-4, 4],
+            axis_config={"include_numbers": False}
         )
 
-        axes = ThreeDAxes()
-
         self.add(axes)
-        self.play(Create(surface))
+
+        x = np.linspace(-3, 3, 300)
+
+        def graph(f, color):
+            g = VMobject(color=color)
+            g.set_points_smoothly([axes.c2p(t, f(t)) for t in x])
+            return g
+
+        g1 = graph(lambda t: t*t, RED)
+        g2 = graph(lambda t: np.sin(t), BLUE)
+        g3 = graph(lambda t: t**3 / 4, GREEN)
+        g4 = graph(lambda t: np.exp(t) / 5, YELLOW)
+
+        self.play(Create(g1))
+        self.wait(0.5)
+
+        self.play(Transform(g1, g2), run_time=2)
+        self.play(Transform(g1, g3), run_time=2)
+        self.play(Transform(g1, g4), run_time=2)
+
         self.wait()

@@ -1,55 +1,136 @@
+// #version 330 core
+
+// layout(triangles) in;
+// layout(triangle_strip, max_vertices = 3) out;
+
+// uniform mat4 model;
+// uniform mat4 view;
+// uniform mat4 projection;
+
+// uniform float u_progress;
+// uniform float triangle_count;
+
+// in VS_OUT {
+//     vec3 pos;   // object-space position
+// } gs_in[];
+
+// out vec3 Normal;
+// out vec3 FragPos;
+
+// out float pProgress;
+// out float progress;
+
+// void main()
+// {
+//     // Object-space positions
+//     vec3 p0 = gs_in[0].pos;
+//     vec3 p1 = gs_in[1].pos;
+//     vec3 p2 = gs_in[2].pos;
+
+//     float triangleID = float(gl_PrimitiveIDIn);
+//     float prevProgress = (triangleID * 1.0) / triangle_count;
+//     float nextProgress = (triangleID * 1.0 + 1.0) / triangle_count;
+
+//     if(u_progress <= prevProgress) return;
+
+//     float localProgress = clamp((u_progress - prevProgress) / (nextProgress - prevProgress), 0.0, 1.0);
+
+//     // Edge vectors
+//     vec3 e0 = p1 - p0;
+//     vec3 e1 = p2 - p0;
+
+//     // Face normal (object space)
+//     vec3 normal = normalize(cross(e0, e1));
+
+//     // Transform normal to world space (important!)
+//     mat3 normalMatrix = transpose(inverse(mat3(model)));
+//     vec3 worldNormal = normalize(normalMatrix * normal);
+
+//     // Emit triangle
+//     for (int i = 0; i < 3; ++i)
+//     {
+//         if(i <= 1){
+//             pProgress = 0;
+//         }
+//         else{
+//             pProgress = 1;
+//         }
+//         vec4 worldPos = model * vec4(gs_in[i].pos, 1.0);
+//         gl_Position = projection * view * worldPos;
+
+//         Normal = worldNormal;
+//         FragPos = worldPos.xyz;
+
+//         EmitVertex();
+//     }
+
+//     EndPrimitive();
+// }
+
+
 #version 330 core
 
-layout (lines) in;
-layout (line_strip, max_vertices = 2) out;
+layout(triangles) in;
+layout(triangle_strip, max_vertices = 3) out;
 
-// **********************************************
-// **** NEW GLOBAL OUTPUT DECLARATIONS ADDED ****
-// **********************************************
-out vec3 FragPos;
-out vec3 Normal;
-flat out int vertexId;
-// **********************************************
+uniform mat4 model;
+uniform mat4 view;
+uniform mat4 projection;
+uniform vec3 objectColor;
+
+uniform float u_progress;
+uniform int triangle_count;
 
 in VS_OUT {
-    vec3 FragPos;   
-    vec3 Normal;
-    flat int vertexId;
+    vec3 pos;
+    vec3 color;
 } gs_in[];
 
-const float MAX_Y_JUMP = 30;
+out vec3 Normal;
+out vec3 FragPos;
+// This tells the fragment shader where this triangle sits in the 0.0 - 1.0 timeline
+out float v_triangleStart; 
+out float v_triangleEnd;
+// This identifies which vertex we are at (0.0 to 1.0) to grow 'inside' the triangle
+out float v_vertexInterp; 
+flat out float triangleID;
+out vec3 obj_color;
 
-flat out int is_discontineous = 0;
+
+uniform int vertices_increment_count;
 
 void main()
 {
-    vec4 p0 = gl_in[0].gl_Position; 
-    vec4 p1 = gl_in[1].gl_Position; 
+    int row = gl_PrimitiveIDIn / vertices_increment_count ;
+    int row_count = triangle_count / vertices_increment_count;
+    float prevProgress = float(row) / float(row_count);
+    float nextProgress = float(row + 1) / float(row_count);
 
-    float jump_magnitude = abs(gs_in[1].FragPos.y - gs_in[0].FragPos.y);
+    // Calculate Normal
+    vec3 e0 = gs_in[1].pos - gs_in[0].pos;
+    vec3 e1 = gs_in[2].pos - gs_in[0].pos;
+    vec3 normal = normalize(cross(e0, e1));
+    mat3 normalMatrix = transpose(inverse(mat3(model)));
+    vec3 worldNormal = normalize(normalMatrix * normal);
 
-    if (gl_in[1].FragPos.y < 5)
+    for (int i = 0; i < 3; ++i)
     {
-        // Emit Vertex 1 (V_i)
-        // Now FragPos, Normal, vertexId refer to the global 'out' variables
-        FragPos = gs_in[0].FragPos;
-        Normal = gs_in[0].Normal;
-        vertexId = gs_in[0].vertexId;
-        gl_Position = p0;
+        vec4 worldPos = model * vec4(gs_in[i].pos, 1.0);
+        gl_Position = projection * view * worldPos;
+
+        obj_color = gs_in[i].color;
+        FragPos = worldPos.xyz;
+        Normal = worldNormal;
+        
+        v_triangleStart = prevProgress;
+        v_triangleEnd = nextProgress;
+        
+        // Assign 0.0 to first vertex and 1.0 to the last to create a gradient across the face
+        int id = int((gl_PrimitiveIDIn % 2 == 1)? (i!=0): i==2);
+        v_vertexInterp = id; 
+        // v_vertexInterp = float(i) / 2.0; 
+
         EmitVertex();
-
-        // Emit Vertex 2 (V_i+1)
-        FragPos = gs_in[1].FragPos;
-        Normal = gs_in[1].Normal;
-        vertexId = gs_in[1].vertexId;
-        gl_Position = p1;
-        EmitVertex();
-
-        is_discontineous = 0;
-
-        EndPrimitive();
     }
-    else{
-        is_discontineous = 1;
-    }
+    EndPrimitive();
 }

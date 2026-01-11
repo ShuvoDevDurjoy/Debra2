@@ -26,6 +26,7 @@ private:
     /// @param shaderFileName
     void compileShader(GLuint &shader, GLenum shader_type, const std::string shaderFileName);
     void compileProgram(GLuint vertex, GLuint fragment);
+    void compileProgram(GLuint vertex, GLuint geometric, GLuint fragment);
 
 public:
     Shader(const std::string &vertexShaderFile, const std::string &fragmentShaderFile);
@@ -35,6 +36,7 @@ public:
     void setFloat(const std::string &, float) const;
     void setVec2(const std::string &, float, float) const;
     void setVec3(const std::string &, float, float, float) const;
+    void setVec3(const std::string &, glm::vec3) const;
     void setInt(const std::string &, int) const;
     void setBool(const std::string &, bool) const;
     void setMat4(const std::string &name, const float *value)

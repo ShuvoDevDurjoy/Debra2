@@ -25,9 +25,10 @@ Shader::Shader(const std::string &vertexShaderFile, const std::string &geometric
     compileShader(geometric, shaderTypes::GEOMETRIC_SHADER, geometricShader);
     compileShader(fragment, shaderTypes::FRAGMENT_SHADER, fragmentShaderFile);
 
-    compileProgram(vertex, fragment);
+    compileProgram(vertex, geometric, fragment);
 
     glDeleteShader(vertex);
+    glDeleteShader(geometric);
     glDeleteShader(fragment);
 }
 
@@ -76,6 +77,38 @@ void Shader::compileProgram(GLuint vertex, GLuint fragment)
     }
 }
 
+void Shader::compileProgram(GLuint vertex, GLuint geometric, GLuint fragment)
+{
+    ProgramID = glCreateProgram();
+
+    glAttachShader(ProgramID, vertex);
+    glAttachShader(ProgramID, geometric);
+    glAttachShader(ProgramID, fragment);
+
+    glLinkProgram(ProgramID);
+
+    int success;
+    GLchar infoLog[512];
+
+    glGetProgramiv(ProgramID, GL_LINK_STATUS, &success);
+    if (!success)
+    {
+        glGetProgramInfoLog(ProgramID, sizeof(infoLog), NULL, infoLog);
+        std::cout << "Error with Comiling Program " << infoLog << std::endl;
+    }
+
+    glValidateProgram(ProgramID);
+
+    GLint status;
+    glGetProgramiv(ProgramID, GL_VALIDATE_STATUS, &status);
+    if (!status)
+    {
+        char log[512];
+        glGetProgramInfoLog(ProgramID, 512, NULL, log);
+        std::cerr << "Program validation failed: " << log << std::endl;
+    }
+}
+
 void Shader::use()
 {
     glUseProgram(ProgramID);
@@ -93,6 +126,9 @@ void Shader::setVec2 (const std::string& name, float x, float y) const {
 }
 void Shader::setVec3 (const std::string &name, float x, float y, float z) const {
     glUniform3f(glGetUniformLocation(ProgramID, name.c_str()), x, y, z);
+}
+void Shader::setVec3(const std::string &name, glm::vec3 value) const {
+    glUniform3f(glGetUniformLocation(ProgramID, name.c_str()), value[0], value[1], value[2]);
 }
 
 void Shader::setInt(const std::string& name, int v)   const {

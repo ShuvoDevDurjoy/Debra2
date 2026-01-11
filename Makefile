@@ -3,7 +3,7 @@ CXX = g++
 CC  = gcc
 
 # Flags
-CXXFLAGS = -Wall -std=c++20 -O2
+CXXFLAGS = -Wall -std=c++17 -O2
 CFLAGS   = -Wall -O2
 
 # Platform-specific linker flags

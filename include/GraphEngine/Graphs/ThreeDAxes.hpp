@@ -14,13 +14,16 @@
 #include "../../Event/KeyClicked.hpp"
 #include "Assets/Arrow.hpp"
 #include <random>
-
-class ThreeDAxes : public singletonGraph, public MouseEvents, public KeyClicked
+#include "GraphObjects/GraphMathObject.hpp"
+class ThreeDAxes : public GraphMathObject
 {
 
 private:
     std::string vertexShaderPath = "./shaders/surface_shaders/vertex.vs";
     std::string fragmentShaderPath = "./shaders/surface_shaders/fragment.fs";
+
+    Shader *shader;
+    GLuint VAO, VBO;
 
     int count = 0;
     int total_size;
@@ -36,7 +39,7 @@ public:
     glm::mat4 projection = glm::mat4(1.0f);
 
     Vec3 cameraPos = Vec3(0.0f, 20.0f, 50.0f);
-
+    std::vector<glm::vec3> points;
 
 public:
     ThreeDAxes();
@@ -50,21 +53,22 @@ public:
             glDeleteBuffers(1, &VBO);
     }
 
-    void onMouseMoveCallback(MouseEvent) override;
-    void onKeyPressedOnceCallback(const KeyEvent &event) override;
-    void onMouseClickCallback(MouseEvent) override{}
-
+    void Init(float) override;
     void draw(float tick) override
     {
         drawTick(tick);
     }
 
     // Core draw function for 3D surfaces
-    void drawTick(float tick) override;
-
-    void init() override;
+    void drawTick(float tick);
 
     void generate(Vec3 start, Vec3 end);
+
+    int getSize() { return points.size(); }
+
+    void add(glm::vec3 p){
+        points.push_back(p);
+    }
     // Core draw function for 3D surfaces
 };
 
