@@ -10,14 +10,14 @@ void ShowCreation::play(float dt)
     if (dt >= end_time)
     {
         progress = 1;
-        targetObject->setProgress(1);
+        targetObject->setStrokeProgress(1);
         targetObject->setFillProgress(1);
         return;
     }
 
     float prg = (AnimationTimmingFunction::linearProgress((dt - start_time), duration));
-
-    targetObject->setProgress(prg < 0 ? 0 : prg);
+    targetObject->showGraph = true;
+    targetObject->setStrokeProgress(prg < 0 ? 0 : prg);
     targetObject->setFillProgress(prg < 0 ? 0 : prg);
 }
 

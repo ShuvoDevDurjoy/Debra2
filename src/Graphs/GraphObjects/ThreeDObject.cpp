@@ -3,17 +3,19 @@
 void ThreeDObject::Init(float dt)
 {
 
-    // this->stroke_shader = new Shader(vertexShaderPath, geometricShaderPath, fragmentShaderPath);
+    this->stroke_shader = new Shader("./shaders/vertex_shader.vs", "./shaders/geometry.gs", "./shaders/fragment_shader.fs");
+    // this->stroke_shader= new Shader(fillVertexShaderPath, fillGeometricShaderPath, fillFragmentShaderPath);
     this->fill_shader = new Shader(fillVertexShaderPath, fillGeometricShaderPath, fillFragmentShaderPath);
-    // fill_color_array = {glm::vec3(1, 0, 1), glm::vec3(1, 1, 0)};
-    fill_color_array = {glm::vec3(1, 0, 1), glm::vec3(1, 1, 0), glm::vec3(1, 0, 1), glm::vec3(1, 1, 0), glm::vec3(1, 0, 1)};
-
-    fill_progress = 1;
-    std::cout << "Graph point size while initialization is: " << getSize() << std::endl;
+    fill_colors = {GraphColor(1, 0, 1), GraphColor(1, 1, 0), GraphColor(0, 1, 1), GraphColor(1, 1, 0), GraphColor(1, 0, 1)};
+    fillProgress = 1;
     if (!getSize())
     {
         generatePoints();
-        std::cout << "here" << std::endl;
+        // points.push_back(glm::vec3(20, -20, 0));
+        // points.push_back(glm::vec3(20, 20, 0));
+        // points.push_back(glm::vec3(-20, -20, 0));
+        // points.push_back(glm::vec3(-20, 20, 0));
+        std::cout << "here in this" << std::endl;
     }
 
     if (!getSize())
@@ -24,18 +26,18 @@ void ThreeDObject::Init(float dt)
     }
     else
     {
+        
+
+        glGenVertexArrays(1, &FillVAO);
+        glGenBuffers(1, &FillVBO);
+        InitFillData();
+
         // Initialize OpenGL Buffer and Array
         glGenVertexArrays(1, &StrokeVAO);
         glGenBuffers(1, &StrokeVBO);
 
         // initialize the stroke data
-        // InitStrokeData();
-
-        glGenVertexArrays(1, &FillVAO);
-        glGenBuffers(1, &FillVBO);
-        // initialize the fill data
-        std::cout << "This is here" << std::endl;
-        InitFillData();
+        InitStrokeData();
     }
 
     is_initialized = true;
@@ -71,17 +73,31 @@ void ThreeDObject::generatePoints()
     std::cout << "point size is: " << points.size() << std::endl;
 }
 
-void ThreeDObject::InitStrokeData() {}
+void ThreeDObject::InitStrokeData() {
+    setStrokeData();
+    glBindVertexArray(StrokeVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, StrokeVBO);
+    initializeStrokeShader();
+    uploadStrokeDataToShader();
+}
+
 void ThreeDObject::InitFillData()
 {
     setFillData();
     glBindVertexArray(FillVAO);
     glBindBuffer(GL_ARRAY_BUFFER, FillVBO);
-    InitializeFillShader();
-    UploadFillShaderData();
+    initializeFillShader();
+    uploadFillDataToShader();
 }
 
-void ThreeDObject::InitializeFillShader()
+void ThreeDObject::initializeStrokeShader() {
+    glBindVertexArray(StrokeVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, StrokeVBO);
+    int buffer_size = getFillsize() * sizeof(glm::vec3) + fill_color_array.size() * sizeof(glm::vec3);
+    glBufferData(GL_ARRAY_BUFFER, buffer_size, nullptr, GL_DYNAMIC_DRAW);
+}
+
+void ThreeDObject::initializeFillShader()
 {
     glBindVertexArray(FillVAO);
     glBindBuffer(GL_ARRAY_BUFFER, FillVBO);
@@ -89,7 +105,19 @@ void ThreeDObject::InitializeFillShader()
     glBufferData(GL_ARRAY_BUFFER, buffer_size, nullptr, GL_DYNAMIC_DRAW);
 }
 
-void ThreeDObject::UploadFillShaderData()
+void ThreeDObject::uploadStrokeDataToShader() {
+    size_t buffer_size = getFillsize() * sizeof(glm::vec3);
+    glBindVertexArray(StrokeVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, StrokeVBO);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, buffer_size, fill_points.data());
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void *)0);
+    glEnableVertexAttribArray(0);
+    glBufferSubData(GL_ARRAY_BUFFER, buffer_size, fill_color_array.size() * sizeof(glm::vec3), fill_color_array.data());
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void *)(buffer_size));
+    glEnableVertexAttribArray(1);
+}
+
+void ThreeDObject::uploadFillDataToShader()
 {
     size_t buffer_size = getFillsize() * sizeof(glm::vec3);
     glBindVertexArray(FillVAO);
@@ -102,8 +130,59 @@ void ThreeDObject::UploadFillShaderData()
     glEnableVertexAttribArray(1);
 }
 
+inline int getPrevPoint(int size, int index){
+    if((index - 1) < 0)
+        return size - 1;
+    else
+        return index - 1;
+}
+inline int getNextPoint(int size, int index){
+    if(index + 1 < size){
+        return index + 1;
+    }
+    else{
+        return size - 1;
+    }
+}
+
 void ThreeDObject::setStrokeData()
 {
+
+    if (!getSize())
+    {
+        std::cerr << "No Points there to set as stroke data" << std::endl;
+        return;
+    }
+    
+    //for row major
+    for (int i = 0; i < resolution.second - 1; i++)
+    {
+
+        // std::pair<glm::vec3, glm::vec3> colors = getFillColorIndex(i);
+        for (int j = 0; j < resolution.first - 1; j++)
+        {
+            glm::vec3 p00 = points[j * resolution.second + i];
+            glm::vec3 p10 = points[(j + 1) * resolution.second + i];
+
+            // int prev_index = getPrevPoint( resolution.first, i);
+            // glm::vec3 p00Prev = points[j * resolution.second + prev_index];
+            // glm::vec3 p10Prev = points[(j + 1) * resolution.second + prev_index];
+
+            glm::vec3 p01 = points[j * resolution.second + (i + 1)];
+            glm::vec3 p11 = points[(j + 1) * resolution.second + (i + 1)];
+
+            // int next_index = getNextPoint(resolution.first, i + 1);
+            // glm::vec3 p01Next = points[j * resolution.second + next_index];
+            // glm::vec3 p11Next = points[(j + 1) * resolution.second + next_index];
+
+            stroke_points.push_back(p00);
+            stroke_points.push_back(p01);
+            stroke_points.push_back(p00);
+            stroke_points.push_back(p10);
+            stroke_points.push_back(p10);
+            stroke_points.push_back(p11);
+        }
+    }
 }
 
 // void ThreeDObject::setFillData()
@@ -163,27 +242,13 @@ void ThreeDObject::setFillData()
     if (getSize() != (resolution.first * resolution.second))
         return;
 
-    std::vector<glm::vec3> color_palette = fill_color_array;
+    setFillColorLinearInterpolation(true);
+    fill_color_resolution = resolution.second - 1;
     fill_color_array.clear();
-
-    int num_colors = color_palette.size();
-    // Calculate how many grid steps per color segment
-    float segments = static_cast<float>(resolution.second - 1) / (num_colors - 1);
-
     for (int i = 0; i < resolution.second - 1; i++)
     {
-        // Find which two colors in the palette we are between
-        int color_idx = static_cast<int>(i / segments);
-        float t_a_lin = (i - (color_idx * segments)) / segments;
-        float t_b_lin = ((i + 1) - (color_idx * segments)) / segments;
-
-        float t_a = (1.0f - cos(t_a_lin * 3.1415927f)) * 0.5f;
-        float t_b = (1.0f - cos(t_b_lin * 3.1415927f)) * 0.5f;
-
-        // colora is the exact color for index i, colorb for index i+1
-        glm::vec3 colora = glm::mix(color_palette[color_idx], color_palette[color_idx + 1], t_a);
-        glm::vec3 colorb = glm::mix(color_palette[color_idx], color_palette[color_idx + 1], t_b);
-
+        
+        std::pair<glm::vec3, glm::vec3> colors = getFillColorIndex(i);
         for (int j = 0; j < resolution.first - 1; j++)
         {
             glm::vec3 p00 = points[j * resolution.second + i];
@@ -193,33 +258,99 @@ void ThreeDObject::setFillData()
 
             // Triangle 1: p00, p01, p10
             fill_points.push_back(p10);
-            fill_color_array.push_back(colora);
+            fill_color_array.push_back(colors.first);
             fill_points.push_back(p00);
-            fill_color_array.push_back(colora); // Fix: use colorb
+            fill_color_array.push_back(colors.first);
             fill_points.push_back(p01);
-            fill_color_array.push_back(colorb); // Fix: use colora
+            fill_color_array.push_back(colors.second); 
 
             // Triangle 2: p10, p01, p11
             fill_points.push_back(p10);
-            fill_color_array.push_back(colora); // Fix: use colora
+            fill_color_array.push_back(colors.first); 
             fill_points.push_back(p11);
-            fill_color_array.push_back(colorb); // Fix: use colorb
+            fill_color_array.push_back(colors.second); 
             fill_points.push_back(p01);
-            fill_color_array.push_back(colorb);
+            fill_color_array.push_back(colors.second);
         }
     }
 
-    std::cout << "fill size is: " << (getFillsize() / 3) << std::endl;
-    std::cout << "resolution that is being drawn, size is: " << (resolution.first - 1) * 2 << std::endl;
+    // for(auto &point: fill_points){
+    //     std::cout << point.x << ", " << point.y << ", " << point.z << std::endl;
+    // }
 }
 
-void ThreeDObject::draw(float dt)
+int ThreeDObject::getSize()
 {
-    drawFill(dt);
+    return (int)points.size();
 }
 
-void ThreeDObject::drawFill(float dt)
+void ThreeDObject::addPoints(glm::vec3 point)
 {
+    points.push_back(point);
+}
+
+void ThreeDObject::setFillProgress(float progress)
+{
+    std::cout << "This is setting up fill progress" << std::endl;
+    fillProgress = progress;
+}
+
+void ThreeDObject::updatePoints() {}
+
+/*
+void update(float dt) override;
+    void updateStroke(float dt) override;
+    void updateFill(float dt) override;
+    void applyUpdaterFunction(float dt) override;
+    void updateStrokePoints() override;
+    void updateFillPoints() override;
+*/
+
+void ThreeDObject::updateStroke(float dt){
+    GLboolean depthWasEnabled = glIsEnabled(GL_DEPTH_TEST);
+
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS);
+
+    stroke_shader->use();
+
+    projection = GraphApp::projection;
+    view = GraphApp::view;
+
+    model = glm::mat4(1.0f);
+    model = glm::rotate(model, glm::radians(GraphApp::rotX), glm::vec3(1, 0, 0));
+    model = glm::rotate(model, glm::radians(GraphApp::rotY), glm::vec3(0, 1, 0));
+
+    stroke_shader->setMat4("model", model);
+    stroke_shader->setMat4("view", view);
+    stroke_shader->setMat4("projection", projection);
+
+    stroke_shader->setFloat("u_progress", fillProgress);
+    stroke_shader->setInt("triangle_count", getFillsize() / 3);
+
+    stroke_shader->setFloat("stroke_line_width", line_width);
+
+    stroke_shader->setInt("vertices_increment_count", ((resolution.first - 1) * 2));
+
+    glm::vec3 cameraPos(0.0f, 0.0f, 100.0f);
+
+    stroke_shader->setVec3("objectColor", 1, 0.67, 0.67);
+    stroke_shader->setVec3("lightPos", cameraPos);
+    stroke_shader->setVec3("viewPos", cameraPos);
+    stroke_shader->setVec3("lightColor", 0.5, 0.5, 0.5);
+
+    glBindVertexArray(StrokeVAO);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    glDrawArrays(GL_TRIANGLES, 0, getFillsize());
+
+    // --- Restore previous depth state ---
+    if (!depthWasEnabled)
+        glDisable(GL_DEPTH_TEST);
+}
+
+void ThreeDObject::updateFill(float dt){
     // --- Save previous depth state ---
     GLboolean depthWasEnabled = glIsEnabled(GL_DEPTH_TEST);
 
@@ -241,6 +372,7 @@ void ThreeDObject::drawFill(float dt)
 
     fill_shader->setFloat("u_progress", fillProgress);
     fill_shader->setInt("triangle_count", getFillsize() / 3);
+    fill_shader->setFloat("stroke_line_width", line_width);
 
     fill_shader->setInt("vertices_increment_count", ((resolution.first - 1) * 2));
 
@@ -258,25 +390,14 @@ void ThreeDObject::drawFill(float dt)
     if (!depthWasEnabled)
         glDisable(GL_DEPTH_TEST);
 }
-
-int ThreeDObject::getSize()
-{
-    return (int)points.size();
+void ThreeDObject::update(float dt){
+    updateFill(dt);
+    updateStroke(dt);
 }
 
-void ThreeDObject::addPoints(glm::vec3 point)
-{
-    points.push_back(point);
-}
+void ThreeDObject::applyUpdaterFunction(float dt){}
 
-void ThreeDObject::setFillProgress(float progress)
-{
-    std::cout << "This is setting up fill progress" << std::endl;
-    fillProgress = progress;
-}
+void ThreeDObject::updateStrokePoints() {}
+void ThreeDObject::updateFillPoints() {}
 
-void ThreeDObject::updatePoints() {}
-
-void ThreeDObject::setColorToFillVertices()
-{
-}
+void ThreeDObject::interpolate(int number){}

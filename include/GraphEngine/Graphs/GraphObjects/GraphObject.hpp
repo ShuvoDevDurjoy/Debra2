@@ -29,46 +29,12 @@ class GraphApp;
 
 class GraphObject : public GraphMathObject
 {
-
-    /*
-            Data Fields for the graph
-    */
 public:
-    Shader *stroke_shader, *fill_shader;
-    glm::mat4 baseModel = glm::mat4(1.0f);
-    glm::vec3 translate = glm::vec3(0, 0, 0);
-    glm::vec3 scale_factor = glm::vec3(1.0f, 1.0f, 1.0f);
-    glm::mat4 model = glm::mat4(1.0f), view, projection;
-    float phi = 0, theta = 0;
-    glm::mat4 scale = glm::mat4(1.0f);
-    float startTime = 0, duration = 1.0f;
-    //in base class this is stroke_line_width
-    float line_width = 1.5f;
-    //specific to this class
     std::pair<float, float> range = {-1, 1};
     int resolution = 500;
 
-    float scale_x = 1, scale_y = 1, scale_z = 1;
-    glm::vec3 rotation_vec = glm::vec3(0, 0, 0), rotation_pivot = glm::vec3(0, 0, 0);
-
-    static int count;
-
-public:
-    float sub_obj_show_interval = 0.1f;
-    bool sub_sync = true;
-
-public:
-    bool i_initialized = false;
-
 public:
     int drawStart = 0, drawSize = 0;
-    //in base class these are stroke_progress, fill_progress, fill_opacity
-    float progress = 1.0f;
-    float fillProgress = 1.0f;
-    float fillOpacity = 1.0f;
-
-    //this is not in base class
-    GraphColor *color = new GraphColor();
 
     //specific to this class
     GLuint StrokeVAO, StrokeVBO;
@@ -77,7 +43,11 @@ public:
     bool stroke_data_initialized = false;
     bool fill_data_initialized = false;
 
-    glm::vec3 *(func)(float, Var);
+    float use_bezier_always = false;
+
+    Var func_var;
+
+    glm::vec3 (*func)(float, Var) = nullptr;
     glm::vec3 (*updater_func)(float, float) = nullptr;
 
 public:
@@ -88,13 +58,10 @@ public:
     std::string fillVertexShaderPath = "./shaders/quadratic_fill/vertex.vs";
     std::string fillFragmentShaderPath = "./shaders/quadratic_fill/fragment.fs";
     std::string fillGeometricShaderPath = "./shaders/quadratic_fill/geometry.gs";
-    // bounding box of the graph
-    float x, y, width, height;
 
-    // factor to scale and rotate the graph as a whole model
-
-    std::vector<glm::vec3> points;
     std::vector<GraphColor> colors;
+    std::vector<GraphColor> stroke_colors;
+    std::vector<GraphColor> fill_colors;
     // contains points to draw a stroke
     std::vector<glm::vec3> stroke_prev_points;
     std::vector<glm::vec3> stroke_current_points;
@@ -114,52 +81,14 @@ public:
     std::vector<float> updateEndTime;
 
 protected:
-    /*
-            Function Fields for the graph
-    */
+    void update(float dt) override;
+    void updateStroke(float dt) override;
+    void updateFill(float dt) override;
 
-private:
-protected:
-    void update(float dt);
-    void updateStroke(float dt);
-    void updateFill(float dt);
+    void applyUpdaterFunction(float dt) override;
 
-
-    void updatePoints(float dt);
-
-    void updateStrokePoints();
-    void updateFillPoints();
-
-    void setDimension()
-    {
-    }
-
-    void moveTo()
-    {
-    }
-    
-    void nextTo(GraphObject *target)
-    {
-    }
-    
-    public:
-    void synchronizeSubObjects(float s_time = -1.0f, float r_time = -1.0f, float delay = 0.0f)
-    {
-        if (s_time == -1.0f)
-        {
-            s_time = this->startTime + this->duration;
-        }
-        if (r_time == -1.0f)
-        {
-            r_time = this->duration;
-        }
-        for (GraphObject *subObj : subGraphObjects)
-        {
-            subObj->setStartTime(s_time);
-            subObj->setDuration(r_time);
-            s_time += r_time + delay;
-        }
-    }
+    void updateStrokePoints() override;
+    void updateFillPoints() override;
     void updatePoints();
 
 public:
@@ -168,31 +97,21 @@ public:
 
     void Init(float dt = 0) override;
 
-    void InitStrokeData();
-    void InitFillData();
+    void InitStrokeData() override;
+    void InitFillData() override;
 
-    void
-    InitSelf(float dt);
+    
+    void setStrokeData() override;
+    void setFillData() override;
+    
+    void initializeStrokeShader() override;
+    void initializeFillShader() override;
+    
+    void uploadStrokeDataToShader() override;
+    void uploadFillDataToShader() override;
+
     void InitSubObject(float dt);
-
-    void setStrokeData();
-    void setFillData(char axis = 'y');
-
-    void initializeStrokeShader();
-    void initializeFillShader();
-
-    void uploadStrokeDataToShader();
-    void uploadFillDataToShader();
-
-    void setStartTime(float s_time = 0.0f)
-    {
-        this->startTime = s_time;
-    }
-    void setDuration(float duration = 1.0f)
-    {
-        this->duration = duration;
-    }
-
+    
     void setColor()
     {
         colors.push_back(GraphColor());
@@ -221,11 +140,8 @@ public:
         subGraphObjects.push_back(sub_object);
     }
 
-    void interpolate(int number);
+    void interpolate(int) override;
 
-    void prepareSubObjects(float start_time, float duration);
-
-    // void generatePoints(glm::vec2 (*func)(float, Var), Var v);
     void generatePoints(glm::vec3 (*func)(float, Var), Var v);
     void UpdateGraphWithFunction(float);
     void setUpdater(glm::vec3 (*updater_function)(float, float), float s_t, float d)
@@ -249,17 +165,8 @@ public:
         return (int)points.size();
     }
 
-    void setFillProgress(float prog){
-        this->fillProgress = prog * 1.0f;
-    }
-
     int getFillSize(){
         return current_fill_points.size();
-    }
-
-    bool isEqual(glm::vec3 a, glm::vec3 b)
-    {
-        return a[0] == b[0] && a[1] == b[1] && a[2] == b[2];
     }
 
     void setDrawStart(int index)
@@ -271,43 +178,7 @@ public:
         drawSize = size;
     }
 
-    void setProgress(float prog)
-    {
-        this->progress = prog * 1.0f;
-    }
-
-    void setBaseModel(glm::mat4 base)
-    {
-        baseModel = base;
-    }
-
-    void setScale(glm::vec3 scale_factor)
-    {
-        this->scale_factor = scale_factor;
-        this->scale_x = scale_factor.x;
-        this->scale_y = scale_factor.y;
-        this->scale_z = scale_factor.z;
-    }
-
-    void setLineWidth(float width){
-        line_width = width;
-    }
-
-    void setTranslate(glm::vec3);
-
-    // transition operation
-    void moveTo(Position pos = Position::NONE);
-    void moveTo(glm::vec3 translate);
-
-    //transition scaling
     void scaleTo(float scale_ratio);
-    void scaleTo(float x_scale, float y_scale);
-
-    void setRotation(glm::vec3 rot_amount, glm::vec3 rot_pivot);
-
-    //transition rotating
-    void rotate(glm::vec3 rotation_amount = glm::vec3(45, 0, 0), glm::vec3 pivot = glm::vec3(0, 0, 0));
-
     void fit(float width, float height, float buff = 0.0f);
 };
 

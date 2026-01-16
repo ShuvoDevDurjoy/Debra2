@@ -22,13 +22,13 @@ public:
     float start_time, duration, end_time;
     glm::vec3 pos;
     bool updatingPos = false;
-    GraphObject *targetObject;
-    GraphObject *morphObject;
+    GraphMathObject *targetObject;
+    GraphMathObject *morphObject;
     bool is_initialized = false;
 
 public:
-    Animation(GraphObject *object, float start_time = 0.0f, float duration = 2.0f);
-    Animation(GraphObject *object, GraphObject* morphObject, float start_time = 0.0f, float duration = 2.0f);
+    Animation(GraphMathObject *object, float start_time = 0.0f, float duration = 2.0f);
+    Animation(GraphMathObject *object, GraphMathObject* morphObject, float start_time = 0.0f, float duration = 2.0f);
     void updateState(float dt);
     void updateProgress(float dt);
     void updateFillProgress(float dt);

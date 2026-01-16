@@ -37,11 +37,11 @@ in vec3 outColor;
 in float stroke_width;
 
 
-in vec3 perpControl;
-in vec3 prepStart;
-in vec3 prevEnd;
+in vec2 perpControl;
+in vec2 prepStart;
+in vec2 prevEnd;
 
-in vec3 pCurrent;
+in vec2 pCurrent;
 
 
 float dot2( in vec2 v ) { return dot(v,v); }
@@ -95,21 +95,21 @@ void main()
 
     float alpha1 = 1.0 - smoothstep(-w, w, edge);
 
-    if (alpha1 <= 0.01)
+    if (alpha1 <= 0.1)
         discard;
 
 
 
     float d = sdBezier(pCurrent.xy,
-                   prepStart.xy,
-                   perpControl.xy,
-                   prevEnd.xy);
+                   prepStart,
+                   perpControl,
+                   prevEnd);
 
-float radius = stroke_width;
-float alpha = smoothstep(radius + 0.2,
-                         radius - 0.2,
+float radius = stroke_width * 0.25;
+float alpha = smoothstep(radius + radius * 0.5,
+                         radius - radius * 0.5,
                          d);
-if(alpha <= 0.01) discard;
+if(alpha <= 0.1) discard;
 
 FragColor = vec4(outColor, alpha);
 

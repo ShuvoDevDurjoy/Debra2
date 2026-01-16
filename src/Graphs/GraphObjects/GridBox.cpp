@@ -48,7 +48,7 @@ void GridBox::generateGrid()
         gg->add(new Line(glm::vec3(x, y - (row_increment * i), 0), glm::vec3(x + width, y - (row_increment * i), 0)));
     }
 
-    gg->synchronize(10);
+    // gg->synchronize(10);
 
     GraphGroup *columnGroup = new GraphGroup();
     columnGroup->setColor(this->colors);
@@ -57,7 +57,7 @@ void GridBox::generateGrid()
         columnGroup->add(new Line(glm::vec3(x + (column_increment * i), y, 0), glm::vec3(x + (column_increment * i), y - height, 0)));
     }
 
-    columnGroup->synchronize(10);
+    // columnGroup->synchronize(10);
 
         add(gg);
     add(columnGroup);

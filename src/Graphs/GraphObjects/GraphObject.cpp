@@ -13,15 +13,20 @@ void GraphObject::update(float dt)
             UpdateGraphWithFunction((dt - updateStartTime[0]) / (updateEndTime[0] - updateStartTime[0]));
         }
     }
-    updateFill(dt);
+    // updateFill(dt);
     updateStroke(dt);
 }
 
 void GraphObject::updateStroke(float dt)
 {
 
-    if (stroke_data_initialized && stroke_shader)
+    if (stroke_data_initialized && stroke_shader && showGraph)
     {
+
+        // GLboolean depthWasEnabled = glIsEnabled(GL_DEPTH_TEST);
+
+        glEnable(GL_DEPTH_TEST);
+        glDepthFunc(GL_LESS);
         stroke_shader->use();
         projection = GraphApp::projection;
         view = GraphApp::view;
@@ -36,7 +41,7 @@ void GraphObject::updateStroke(float dt)
         // std::cout << "progress is: " << progress << std::endl;
         stroke_shader->setFloat("uProgress", progress);
         stroke_shader->setInt("vertexCount", getSize());
-        stroke_shader->setVec3("objectColor", color->RED, color->GREEN, color->BLUE);
+        stroke_shader->setVec3("objectColor", 0.67f, 0.67f, 0.67f);
         stroke_shader->setVec3("lightColor", 1.0f, 0.8f, 0.8f);
         stroke_shader->setVec3("lightPos", GraphApp::cameraPos[0], GraphApp::cameraPos[1], GraphApp::cameraPos[2]);
         stroke_shader->setVec3("viewPos", GraphApp::cameraPos[0], GraphApp::cameraPos[1], GraphApp::cameraPos[2]);
@@ -45,8 +50,17 @@ void GraphObject::updateStroke(float dt)
         stroke_shader->setVec2("uViewportSize", 1200, 600);
         stroke_shader->setFloat("u_line_width", line_width);
         stroke_shader->setFloat("uv_anti_alias_width_pass", 1.0f);
+        stroke_shader->setFloat("user_bezier_always", use_bezier_always ? 1.0f : 0.0f);
+        stroke_shader->setInt("u_layer", layer);
         glBindVertexArray(StrokeVAO);
+        glEnable(GL_BLEND);
+        // glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        // glEnable(GL_POLYGON_OFFSET_FILL);
+        glPolygonOffset(-1.0f, -1.0f); // pull forward slightly
+
         glDrawArrays(GL_LINE_STRIP, drawStart, getSize());
+        // if (!depthWasEnabled)
+        //     glDisable(GL_DEPTH_TEST);
     }
 
     for (GraphObject *subObj : subGraphObjects)
@@ -66,7 +80,7 @@ void GraphObject::updateFill(float dt)
 
     fill_shader->setFloat("uProgress", fillProgress);
     fill_shader->setInt("vertexCount", getFillSize());
-    fill_shader->setVec3("objectColor", color->RED, color->GREEN, color->BLUE);
+    fill_shader->setVec3("objectColor", 0.67f, 0.67f, 0.67f);
     fill_shader->setVec3("lightColor", 1.0f, 0.8f, 0.8f);
     fill_shader->setFloat("fillOpacity", fillOpacity);
     fill_shader->setVec3("lightPos", GraphApp::cameraPos[0], GraphApp::cameraPos[1], GraphApp::cameraPos[2]);
@@ -78,6 +92,9 @@ void GraphObject::updateFill(float dt)
 void GraphObject::Init(float s_time)
 {
 
+    layer = s_time;
+
+    std::cout << "Layer is: " << layer << std::endl;
     // shader to draw the stroke of the graph
     this->stroke_shader = new Shader(vertexShaderPath, geometricShaderPath, fragmentShaderPath);
     // shader for filling the graph's underneath area
@@ -147,16 +164,21 @@ void GraphObject::initializeFillShader()
     glBufferData(GL_ARRAY_BUFFER, buffer_size, nullptr, GL_DYNAMIC_DRAW);
 }
 
-void GraphObject::InitSelf(float s_time)
-{
-}
-
 void GraphObject::InitSubObject(float s_time)
 {
     for (GraphObject *subObj : subGraphObjects)
     {
         subObj->Init(s_time);
     }
+}
+
+inline void showPoints(std::vector<glm::vec3> pts)
+{
+    for (auto p : pts)
+    {
+        std::cout << "(" << p.x << "," << p.y << "," << p.z << ") ";
+    }
+    std::cout << std::endl;
 }
 
 void GraphObject::setStrokeData()
@@ -173,10 +195,10 @@ void GraphObject::setStrokeData()
     {
         stroke_current_points.push_back(points[i]);
     }
-    // setting up prev points for stroke
-    if (isEqual(points[0], points[getSize() - 1]))
+
+    if (isEqual(points[0], points[getSize() - 1]) && getSize() >=2 )
     {
-        stroke_prev_points.push_back(points[getSize() - 1]);
+        stroke_prev_points.push_back(points[getSize() - 2]);
     }
     else
     {
@@ -195,21 +217,13 @@ void GraphObject::setStrokeData()
         stroke_next_points.push_back(points[i]);
     }
 
-    if (isEqual(points[0], points[getSize() - 1]))
+    if (isEqual(points[0], points[getSize() - 1]) && getSize() >= 2)
     {
         stroke_next_points.push_back(points[1]);
     }
     else
     {
         stroke_next_points.push_back(points[getSize() - 1]);
-    }
-}
-
-inline void showPoints(std::vector<glm::vec3> pts)
-{
-    for (auto p : pts)
-    {
-        std::cout << "(" << p.x << "," << p.y << "," << p.z << ")" << std::endl;
     }
 }
 
@@ -294,7 +308,7 @@ inline std::vector<Polygonn> buildFillPolygons(
     return result;
 }
 
-void GraphObject::setFillData(char axis)
+void GraphObject::setFillData()
 {
     using Point2D = std::pair<float, float>;
 
@@ -325,8 +339,10 @@ void GraphObject::setFillData(char axis)
 
 void GraphObject::applyColorToVertex()
 {
-    int n = getSize();
+    int n =getSize();
     stroke_color_array.resize(n);
+
+    std::cout << "Graph Color size is: " << colors.size() << std::endl;
 
     if (colors.empty())
     {
@@ -355,7 +371,7 @@ void GraphObject::applyColorToVertex()
     }
 }
 
-void GraphObject::updatePoints(float dt)
+void GraphObject::applyUpdaterFunction(float dt)
 {
     points.clear();
     float p = abs(range.second - range.first) / resolution;
@@ -402,7 +418,7 @@ void GraphObject::UpdateGraphWithFunction(float dt)
     stroke_prev_points.clear();
     stroke_next_points.clear();
 
-    updatePoints(dt);
+    applyUpdaterFunction(dt);
     setStrokeData();
 
     drawSize = getSize();
@@ -466,78 +482,6 @@ void GraphObject::setDimension(float minX, float maxX, float minY, float maxY)
     y = maxY;
     width = maxX - minX;
     height = maxY - minY;
-}
-
-void GraphObject::setTranslate(glm::vec3 trans)
-{
-    this->translate = trans - glm::vec3(x, y, 0);
-}
-
-void GraphObject::moveTo(glm::vec3 newPos)
-{
-    translate = newPos - glm::vec3(x, y, 0);
-    updatePoints();
-}
-
-void GraphObject::moveTo(Position pos)
-{
-    glm::vec3 translate = glm::vec3(0, 0, 0);
-    switch (pos)
-    {
-    case Position::LEFT:
-        translate = glm::vec3(x - width, y, 0);
-        break;
-    case Position::RIGHT:
-        translate = glm::vec3(x + width, y, 0);
-        break;
-    case Position::TOP:
-        translate = glm::vec3(x, y + height, 0);
-        break;
-    case Position::BOTTOM:
-        translate = glm::vec3(x, y - height, 0);
-        break;
-    case Position::TOP_LEFT:
-        translate = glm::vec3(x - width, y + height, 0);
-        break;
-    case Position::TOP_RIGHT:
-        translate = glm::vec3(x + width, y + height, 0);
-        break;
-    case Position::BOTTOM_LEFT:
-        translate = glm::vec3(x - width, y - height, 0);
-        break;
-    case Position::BOTTOM_RIGHT:
-        translate = glm::vec3(x + width, y - height, 0);
-        break;
-    case Position::NONE:
-        translate = glm::vec3(x + width / 2, y - height / 2, 0);
-        break;
-    }
-
-    moveTo(translate);
-}
-
-void GraphObject::prepareSubObjects(float start_time, float duration)
-{
-    int subObjCount = subGraphObjects.size();
-    setStartTime(start_time);
-    setDuration(duration);
-    float interval;
-    float ind_duration;
-    if (sub_sync || ((sub_obj_show_interval * subObjCount) > duration))
-    {
-        interval = duration / subObjCount;
-        ind_duration = interval;
-    }
-    else
-    {
-        interval = sub_obj_show_interval;
-        ind_duration = duration - interval * (subObjCount - 1);
-    }
-
-    for (int i = 0; i < subObjCount; ++i)
-    {
-        subGraphObjects[i]->prepareSubObjects(this->startTime + i * interval, ind_duration);
-    }
 }
 
 void GraphObject::updateStrokePoints()
@@ -629,32 +573,6 @@ void GraphObject::updatePoints()
     setStrokeData();
     uploadStrokeDataToShader();
     uploadFillDataToShader();
-}
-
-void GraphObject::scaleTo(float x_scale, float y_scale)
-{
-    this->scale_x = x_scale;
-    this->scale_y = y_scale;
-    this->scale_z = 1;
-    updatePoints();
-    // setStrokeData();
-    // uploadStrokeDataToShader();
-}
-
-void GraphObject::scaleTo(float scale_ratio)
-{
-}
-
-void GraphObject::setRotation(glm::vec3 rot_amount, glm::vec3 rot_pivot)
-{
-    rotation_vec = rot_amount;
-    rotation_pivot = rot_pivot;
-}
-
-void GraphObject::rotate(glm::vec3 rotation_amount, glm::vec3 pivot)
-{
-    setRotation(rotation_amount, pivot);
-    updatePoints();
 }
 
 void GraphObject::interpolate(int number)

@@ -15,7 +15,7 @@ public:
         : sides(sides), radius(radius), centerX(centerX), centerY(centerY)
     {
         resolution = sides;
-        setDimension();
+        // setDimension();
         generatePoints();
     }
 

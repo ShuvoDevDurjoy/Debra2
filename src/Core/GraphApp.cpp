@@ -4,15 +4,15 @@ KeyEventManager *GraphApp::keyManager;
 MouseEventListener *GraphApp::mouseEventMangager;
 glm::mat4 GraphApp::view, GraphApp::projection;
 glm::vec3 GraphApp::cameraPos;
+glm::vec3 GraphApp::camera_center = glm::vec3(0, 0, 0);
 float GraphApp::lastX = 0, GraphApp::lastY = 0, GraphApp::rotX = 0, GraphApp::rotY = 0;
+int GraphApp::drawCount = 0;
 
 GraphApp::GraphApp()
 {
     InitWindow();
     loadGLAD();
     InitTextRenderer();
-    window_width = 600;
-    window_height = 400;
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
     shader = new Shader(vertex_shader_file, fragment_shader_file);
@@ -212,15 +212,15 @@ void GraphApp::onMouseMoveCallback(MouseEvent event)
         lastY = event.positionY;
 
         // Map full screen drag → full rotation
-        float rotPerPixelX = 360.0f / event.windowHeight;
-        float rotPerPixelY = 360.0f / event.windowWidth;
+        float rotPerPixelX = 180.0f / event.windowHeight;
+        float rotPerPixelY = 180.0f / event.windowWidth;
 
         rotX += dy * rotPerPixelX; // vertical drag → X axis
         rotY += dx * rotPerPixelY; // horizontal drag → Y axis
 
         // Optional: keep values bounded
-        rotX = fmod(rotX, 360.0f);
-        rotY = fmod(rotY, 360.0f);
+        rotX = fmod(rotX, 180.0f);
+        rotY = fmod(rotY, 180.0f);
 
     }
     else
@@ -238,27 +238,27 @@ void GraphApp::onKeyPressedOnceCallback(const KeyEvent &event)
     }
     else if (event.key == GLFW_KEY_B)
     {
-        cameraPos.z += 5.0f;
+        cameraPos.z += 2.0f;
     }
     else if (event.key == GLFW_KEY_UP)
     {
-        cameraPos.y += 5.0f;
+        camera_center.y -= 2.0f;
     }
     else if (event.key == GLFW_KEY_DOWN)
     {
-        cameraPos.y -= 5.0f;
+        camera_center.y += 2.0f;
     }
     else if (event.key == GLFW_KEY_LEFT)
     {
-        cameraPos.x -= 5.0f;
+        camera_center.x += 2.0f;
     }
-    else if (event.key == GLFW_KEY_R)
+    else if (event.key == GLFW_KEY_RIGHT)
     {
-        cameraPos.x += 5.0f;
+        camera_center.x -= 2.0f;
     }
 
     view = glm::lookAt(
-        glm::vec3(cameraPos[0], cameraPos[1], cameraPos[2]),
-        glm::vec3(0.0f, 0.0f, 0.0f),
+        glm::vec3(cameraPos[0] + camera_center.x, cameraPos[1] + camera_center.y, cameraPos[2]),
+        glm::vec3(camera_center.x, camera_center.y, camera_center.z),
         glm::vec3(0.0f, 1.0f, 0.0f));
 }

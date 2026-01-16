@@ -2,6 +2,7 @@
 #define __GRAPHCOLOR__HPP__
 
 #include <stdlib.h>
+#include "../../glm/glm.hpp"
 
 class GraphColor
 {
@@ -22,6 +23,10 @@ public:
         this->RED = RED;
         this->GREEN = GREEN;
         this->BLUE = BLUE;
+    }
+
+    static glm::vec3 colorToVec(GraphColor color){
+        return glm::vec3(color.RED, color.GREEN, color.BLUE);
     }
 };
 

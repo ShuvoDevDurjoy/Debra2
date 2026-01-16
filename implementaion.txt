@@ -1,0 +1,3 @@
+*** (indicates the functionality should be provided for animation purpose)
+<<<<< (indicates should be commented out later)
+<<<<< contemporary implementation is required

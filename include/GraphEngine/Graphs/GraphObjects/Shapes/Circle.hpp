@@ -18,7 +18,7 @@ class Rectangle: public BasePolygon{
 
 class Dot: public BasePolygon{
     public:
-        Dot(float centerX = 0, float centerY = 0, float radius = 0.5f) : BasePolygon(32, radius, centerX, centerY){}
+        Dot(float centerX = 0, float centerY = 0, float radius = 0.5f, float res = 32) : BasePolygon(res, radius, centerX, centerY){}
 };
 
 #endif

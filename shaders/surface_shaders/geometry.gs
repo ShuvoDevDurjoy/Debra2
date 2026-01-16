@@ -96,6 +96,8 @@ out float v_vertexInterp;
 flat out float triangleID;
 out vec3 obj_color;
 
+uniform float stroke_line_width;
+
 
 uniform int vertices_increment_count;
 
@@ -113,24 +115,45 @@ void main()
     mat3 normalMatrix = transpose(inverse(mat3(model)));
     vec3 worldNormal = normalize(normalMatrix * normal);
 
-    for (int i = 0; i < 3; ++i)
-    {
-        vec4 worldPos = model * vec4(gs_in[i].pos, 1.0);
-        gl_Position = projection * view * worldPos;
+    vec3 dir0 = normalize(gs_in[1].pos - gs_in[0].pos);
+    vec3 dir1 = normalize(gs_in[2].pos - gs_in[1].pos);
 
-        obj_color = gs_in[i].color;
-        FragPos = worldPos.xyz;
-        Normal = worldNormal;
-        
-        v_triangleStart = prevProgress;
-        v_triangleEnd = nextProgress;
-        
-        // Assign 0.0 to first vertex and 1.0 to the last to create a gradient across the face
-        int id = int((gl_PrimitiveIDIn % 2 == 1)? (i!=0): i==2);
-        v_vertexInterp = id; 
-        // v_vertexInterp = float(i) / 2.0; 
+    float line_width = (stroke_line_width * 0.05);
 
-        EmitVertex();
-    }
+    vec3 p0 = gs_in[0].pos * 1.0 + dir0 * line_width + dir1 * line_width;
+    vec3 p1 = gs_in[1].pos * 1.0 - dir0 * line_width + dir1 * line_width;
+    vec3 p2 = gs_in[2].pos * 1.0 - dir1 * line_width - dir0 * line_width;
+
+
+    vec4 worldPos = model * vec4(p0, 1.0);
+    gl_Position = projection * view * worldPos;
+    obj_color = gs_in[0].color;
+    FragPos = worldPos.xyz;
+    Normal = worldNormal;
+    v_triangleStart = prevProgress;
+    v_triangleEnd = nextProgress;
+    v_vertexInterp = 0; 
+    EmitVertex();
+
+    worldPos = model * vec4(p1, 1.0);
+    gl_Position = projection * view * worldPos;
+    obj_color = gs_in[1].color;
+    FragPos = worldPos.xyz;
+    Normal = worldNormal;
+    v_triangleStart = prevProgress;
+    v_triangleEnd = nextProgress;
+    v_vertexInterp = 0; 
+    EmitVertex();
+
+    worldPos = model * vec4(p2, 1.0);
+    gl_Position = projection * view * worldPos;
+    obj_color = gs_in[2].color;
+    FragPos = worldPos.xyz;
+    Normal = worldNormal;
+    v_triangleStart = prevProgress;
+    v_triangleEnd = nextProgress;
+    v_vertexInterp = 1; 
+    EmitVertex();
+    
     EndPrimitive();
 }

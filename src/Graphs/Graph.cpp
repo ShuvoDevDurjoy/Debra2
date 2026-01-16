@@ -64,7 +64,8 @@ void Graph::InitGraphs()
 {
     for (GraphMathObject *graph : graphs)
     {
-        graph->Init(0);
+        graph->Init(GraphApp::drawCount);
+        GraphApp::drawCount++;
     }
 }
 
@@ -160,7 +161,7 @@ void Graph::draw(float tick)
     {
         for (GraphMathObject *graph : graphs)
         {
-            graph->draw(tick);
+            graph->update(tick);
         }
 
         AnimationManager::Run(tick);

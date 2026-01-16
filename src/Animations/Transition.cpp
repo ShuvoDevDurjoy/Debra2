@@ -7,37 +7,37 @@ Transition::Transition(GraphObject *object, GraphObject *targetObj, float start_
 void Transition::Init()
 {
     
-    int resolution1 = targetObject->getSize() - 1;
-    int resolution2 = morphObject->getSize() - 1;
-    if (resolution1 > resolution2)
-    {
-        morphObject->interpolate(resolution1);
-        targetObject->interpolate(resolution1);
-    }
-    else
-    {
-        targetObject->interpolate(resolution2);
-        morphObject->interpolate(resolution2);
-    }
+    // int resolution1 = targetObject->getPointsSize() - 1;
+    // int resolution2 = morphObject->getPointsSize() - 1;
+    // if (resolution1 > resolution2)
+    // {
+    //     morphObject->interpolate(resolution1);
+    //     targetObject->interpolate(resolution1);
+    // }
+    // else
+    // {
+    //     targetObject->interpolate(resolution2);
+    //     morphObject->interpolate(resolution2);
+    // }
     
     originalPoints = targetObject->points;
-    fillOriginalPoints = targetObject->current_fill_points;
+    // fillOriginalPoints = targetObject->current_fill_points;
     
     is_initialized = true;
 }
 
 void Transition::morphPoints(float alpha)
 {
-    for (int i = 0; i < targetObject->getSize(); ++i)
-    {
-        glm::vec3 p = glm::mix(originalPoints[i], morphObject->points[i], alpha);
-        targetObject->points[i] = p;
-    }
+    // for (int i = 0; i < targetObject->getSize(); ++i)
+    // {
+    //     glm::vec3 p = glm::mix(originalPoints[i], morphObject->points[i], alpha);
+    //     targetObject->points[i] = p;
+    // }
     
-    for (int i = 0; i < targetObject->getFillSize(); ++i){
-        glm::vec3 p = glm::mix(fillOriginalPoints[i], morphObject->current_fill_points[i], alpha);
-        targetObject->current_fill_points[i] = p;
-    }
+    // for (int i = 0; i < targetObject->getFillSize(); ++i){
+    //     glm::vec3 p = glm::mix(fillOriginalPoints[i], morphObject->current_fill_points[i], alpha);
+    //     targetObject->current_fill_points[i] = p;
+    // }
 
 }
 

@@ -40,6 +40,8 @@ private:
     static MouseEventListener *mouseEventMangager;
     static glm::mat4 projection, view;
     static glm::vec3 cameraPos;
+    static glm::vec3 camera_center;
+    static int drawCount;
     static bool isAlive;
 
 private:

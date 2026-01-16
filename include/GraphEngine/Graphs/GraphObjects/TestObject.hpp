@@ -5,6 +5,9 @@
 
 class TestObject: public GraphObject{
     public: 
+        TestObject(){
+            use_bezier_always = true;
+        }
         void setPoints(glm::vec3 p){
             points.push_back(p);
         }

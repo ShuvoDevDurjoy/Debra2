@@ -6,7 +6,7 @@
 
 #include "../../Math/Var.hpp"
 
-class ThreeDObject: public GraphObject{
+class ThreeDObject: public GraphMathObject{
     private:
         std::string vertexShaderPath = "./shaders/quadratic_shaders/vertex.vs";
         std::string fragmentShaderPath = "./shaders/quadratic_shaders/fragment.fs";
@@ -16,38 +16,15 @@ class ThreeDObject: public GraphObject{
         std::string fillFragmentShaderPath = "./shaders/surface_shaders/fragment.fs";
         std::string fillGeometricShaderPath = "./shaders/surface_shaders/geometry.gs";
 
-        Shader *stroke_shader, *fill_shader;
-
-        glm::mat4 baseModel = glm::mat4(1.0f);
-        glm::vec3 translate = glm::vec3(0, 0, 0);
-        glm::vec3 scale_factor = glm::vec3(1.0f, 1.0f, 1.0f);
-        glm::mat4 model = glm::mat4(1.0f), view, projection;
-        float phi = 0, theta = 0;
-        glm::mat4 scale = glm::mat4(1.0f);
-        float startTime = 0, duration = 1.0f;
-        float line_width = 1.5f;
         std::pair<float, float> range = {-1, 1};
-
-        float scale_x = 1, scale_y = 1, scale_z = 1;
-        glm::vec3 rotation_vec = glm::vec3(0, 0, 0), rotation_pivot = glm::vec3(0, 0, 0);
-
-        float sub_obj_show_interval = 0.1f;
-        bool sub_sync = true;
-
-        bool is_initialized = false;
-
-        float stroke_progress;
-        float fill_progress = 1;
-        float fill_Opacity = 1;
 
         GLuint StrokeVAO, StrokeVBO;
         GLuint FillVAO, FillVBO;
 
-        float x, y, width, height;
-
-        std::vector<glm::vec3> points;
-
         std::vector<glm::vec3> stroke_points;
+        std::vector<glm::vec3> stroke_prev_points;
+        std::vector<glm::vec3> stroke_current_points;
+        std::vector<glm::vec3> stroke_next_points;
         std::vector<glm::vec3> fill_points;
 
         std::vector<glm::vec3> stroke_color_array;
@@ -67,21 +44,25 @@ public:
 
     void Init(float dt = 0) override;
 
-    void draw(float dt) override;
+    void InitStrokeData() override;
+    void InitFillData() override;
 
-    void drawFill(float dt);
+    void setStrokeData() override;
+    void setFillData() override;
 
+    void initializeStrokeShader() override;
+    void initializeFillShader() override;
 
-    void InitStrokeData();
-    void InitFillData();
+    void uploadStrokeDataToShader() override;
+    void uploadFillDataToShader() override;
 
-    void InitializeFillShader();
-    void UploadFillShaderData();
+    void interpolate(int) override;
+
+    void draw(float dt) {
+        update(dt);
+    };
 
     void setPoints(std::vector<glm::vec3> points);
-
-    void setStrokeData();
-    void setFillData();
 
     void setFillProgress(float progress);
     void setColorToFillVertices();
@@ -95,6 +76,17 @@ public:
     int getFillsize(){
         return (int)fill_points.size();
     }
+
+    int getStrokeSize(){
+        return (int)stroke_points.size();
+    }
+
+    void update(float dt) override;
+    void updateStroke(float dt) override;
+    void updateFill(float dt) override;
+    void applyUpdaterFunction(float dt) override;
+    void updateStrokePoints() override;
+    void updateFillPoints() override;
 
     void updatePoints();
 };

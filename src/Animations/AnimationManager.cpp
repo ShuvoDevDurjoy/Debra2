@@ -37,7 +37,7 @@ void AnimationManager::Run(float dt)
         Animation *anim = animationObjectQueue.front();
         if(anim->start_time <= dt){
             anim->play(dt);
-            anim->targetObject->updatePoints();
+            // anim->targetObject->updatePoints();
         }
         if(anim->end_time >= dt){
             animationObjectQueue.push(anim);

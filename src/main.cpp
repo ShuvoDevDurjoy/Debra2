@@ -19,8 +19,8 @@
 #include "../include/glm/glm.hpp"
 #include "../include/glm/gtc/matrix_transform.hpp"
 
-
-glm::vec3 generate(float r, float t, Var v){
+glm::vec3 generate(float r, float t, Var v)
+{
     float x = r * 20.0f;
     float y = x * x;
     float z = x * cos(r);
@@ -43,7 +43,7 @@ glm::vec3 paraboloid(float r, float theta, Var vars)
 {
     float x = 10.0f * cos(theta);
     float y = 10.0f * sin(theta);
-    float z = r ; // height proportional to r^2
+    float z = r; // height proportional to r^2
     return glm::vec3(x, y, z);
 }
 
@@ -61,29 +61,128 @@ glm::vec3 sphere(float r, float theta, Var vars)
     return glm::vec3(x, y, z);
 }
 
-int main(){
+glm::vec3 brachistochrone(float t, Var v)
+{
+    float a = v[0];
+    float x0 = v[1];
+    float y0 = v[2];
+
+    float x = x0 + a * (t - sin(t));
+    float y = y0 - a * (1 - cos(t));
+
+    return glm::vec3(x, y, 0);
+}
+
+glm::vec3 butterflyCurve(float t, Var v)
+{
+    float a = std::exp(std::cos(t)) - 2.0f * std::cos(4.0f * t) - std::pow(std::sin(t / 12.0f), 5.0f);
+
+    float x = v[0] * std::sin(t) * a;
+    float y = v[1] * std::cos(t) * a;
+    // float z = v[0] * std::cos(t) * std::sin(t) * a;
+    float z = 0;
+
+    return glm::vec3(x, y, z);
+}
+
+int main()
+{
     Graph *graph = Graph::getInstance(0);
 
-    // ThreeDAxes* three_d_axes = new ThreeDAxes();
-    // graph->play(three_d_axes);
+    Dot *dot0 = new Dot(0, 0, 25, 32);
+    Dot *dot1 = new Dot(0, 0, 30, 3);
+    Dot *dot2 = new Dot(0, 0, 30, 4);
+    Dot *dot3 = new Dot(0, 0, 15, 5);
+    Dot *dot4 = new Dot(0, 0, 20, 6);
+    Dot *dot5 = new Dot(0, 0, 25, 13);
+    dot0->setStrokeWidth(2.0f);
+    dot1->setStrokeWidth(3.0f);
+    dot2->setStrokeWidth(2.0f);
+    dot3->setStrokeWidth(3.0f);
+    dot4->setStrokeWidth(4.0f);
+    dot5->setStrokeWidth(5.0f);
+    // graph->play(dot0);
+    // graph->play(new ShowCreation(dot0, 18, 5));
+    // graph->play(new ShowCreation(dot1, 3, 5));
+    // graph->play(new ShowCreation(dot2, 6, 5));
+    // graph->play(new ShowCreation(dot3, 9, 5));
+    // graph->play(new ShowCreation(dot4, 12, 5));
+    // graph->play(new ShowCreation(dot5, 15, 5));
+    // graph->play(dot1);
+    // graph->play(dot2);
+    // graph->play(dot3);
+    // graph->play(dot4);
+    // graph->play(dot5);
+    dot0->fillOpacity = 0;
+    dot1->fillOpacity = 0;
+    dot2->fillOpacity = 0;
+    dot3->fillOpacity = 0;
+    dot4->fillOpacity = 0;
+    dot5->fillOpacity = 0;
+    Var v;
+    v.addVar(10.0f);
+    v.addVar(10.0f);
 
-    ThreeDObject* td = new ThreeDObject();
-    td->r_range = {0, 2.0f * M_PI};
-    td->t_range = {0, 2.0f * M_PI};
-    td->resolution = {50, 50};
-    td->graph_func = torus;
-    graph->play(new ShowFillCreation(td, 0, 5));
+    TestObject *test = new TestObject();
+    test->range = {-5.0f * M_PI, 6.0f * M_PI};
+    test->generatePoints(butterflyCurve, v);
+    // test->setPoints(glm::vec3(-30, -30, 0));
+    // test->setPoints(glm::vec3(-30, 30, 0));
+    // test->setPoints(glm::vec3(-40, 10, 0));
+    // test->setPoints(glm::vec3(-45, 30, 0));
+    test->setStrokeWidth(3.0f);
+    // test->setPoints(glm::vec3(-30, -30, 0));
+    // test->setPoints(glm::vec3(30, 14, 0));
+    // test->setPoints(glm::vec3(50, 8, 0));
+    // test->setPoints(glm::vec3(55, 20, 0));
+    TestObject *test1 = new TestObject();
+    test1->resolution = 2500;
+    test1->generatePoints([](float t, Var v)
+                         { float x = 50 * t; float y = 5.0f * sin(x * 5.0f);
+                        float z = 0;
+                    return glm::vec3(x, y, z); }, v);
+    test->generatePoints(butterflyCurve, v);
 
-    graph->play(td);
+    test1->fillOpacity = 0;
+    graph->play(test1);
+    test->fillOpacity = 0;
+    test1->setStrokeWidth(1.0f);
+    test->setStrokeWidth(10.0f);
+    graph->play(test);
+    graph->play(new ShowCreation(test, 0, 10));
 
-    ThreeDObject *testObject = new ThreeDObject();
-    testObject->r_range = {0, 1};
-    testObject->t_range = {0, 2};
-    testObject->resolution = {2, 5};
-    testObject->setPoints({glm::vec3(20, -5, 29), glm::vec3(10, -5, 29), glm::vec3(0, -5, 29), glm::vec3(-10, -5, 29), glm::vec3(-20, -5, 29),
-                            glm::vec3(20, 5, 29), glm::vec3(10, 5, 29), glm::vec3(0, 5, 29), glm::vec3(-10, 5, 29), glm::vec3(-20, 5, 29)});
-    graph->play(testObject);
-    graph->play(new ShowCreation(testObject, 0, 5));
+    float L = 30.0f;
+    Line *x_pos_to_neg = new Line(glm::vec3(L, 0, 0), glm::vec3(-L, 0, 0));
+    Line *x_neg_to_pos = new Line(glm::vec3(-L, 5, 0), glm::vec3(L, 5, 0));
+
+    Line *y_pos_to_neg = new Line(glm::vec3(0, L, 0), glm::vec3(0, -L, 0));
+    Line *y_neg_to_pos = new Line(glm::vec3(5, -L, 0), glm::vec3(5, L, 0));
+
+    Line *z_offset1 = new Line(glm::vec3(0, 10, L), glm::vec3(0, 10, -L));
+    Line *z_offset2 = new Line(glm::vec3(0, 5, -L), glm::vec3(0, 5, L));
+
+    GraphColor color1 = GraphColor(0, 1, 1);
+    GraphColor color2 = GraphColor(1, 1, 0);
+
+    x_pos_to_neg->setColor(color1);
+    y_pos_to_neg->setColor(color2);
+
+    int offset = 10;
+    for (int i = 0; i < 2; ++i)
+    {
+        Line *line = new Line(glm::vec3(-offset + i * offset * 2, offset * 3, 0), glm::vec3(-offset + i * offset * 2, -offset * 3, 0));
+        line->setColor({color1, color2});
+        graph->play(line);
+        line->showGraph = false;
+        graph->play(new ShowCreation(line, i * 2, 5));
+
+        Line *liney = new Line(glm::vec3(-offset * 3, -offset + i * offset * 2, 0), glm::vec3(offset * 3, -offset + i * offset * 2, 0));
+        liney->setColor({color1, color2});
+        graph->play(liney);
+        liney->showGraph = false;
+        graph->play(new ShowCreation(liney, i * 2, 5));
+    }
+
 
     graph->run();
 }
