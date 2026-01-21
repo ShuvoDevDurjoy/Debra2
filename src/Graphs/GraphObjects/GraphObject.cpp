@@ -25,8 +25,8 @@ void GraphObject::updateStroke(float dt)
 
         // GLboolean depthWasEnabled = glIsEnabled(GL_DEPTH_TEST);
 
-        glEnable(GL_DEPTH_TEST);
-        glDepthFunc(GL_LESS);
+        // glEnable(GL_DEPTH_TEST);
+        // glDepthFunc(GL_LESS);
         stroke_shader->use();
         projection = GraphApp::projection;
         view = GraphApp::view;
@@ -54,7 +54,7 @@ void GraphObject::updateStroke(float dt)
         stroke_shader->setInt("u_layer", layer);
         glBindVertexArray(StrokeVAO);
         glEnable(GL_BLEND);
-        // glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         // glEnable(GL_POLYGON_OFFSET_FILL);
         glPolygonOffset(-1.0f, -1.0f); // pull forward slightly
 
@@ -563,6 +563,7 @@ void GraphObject::updateFillPoints()
 void GraphObject::updatePoints()
 {
 
+    std::cout << "This is updating points" << std::endl;
     updateStrokePoints();
     updateFillPoints();
 

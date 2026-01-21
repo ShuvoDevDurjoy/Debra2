@@ -109,7 +109,7 @@ float radius = stroke_width * 0.25;
 float alpha = smoothstep(radius + radius * 0.5,
                          radius - radius * 0.5,
                          d);
-if(alpha <= 0.1) discard;
+if(alpha <= 0.01) discard;
 
 FragColor = vec4(outColor, alpha);
 

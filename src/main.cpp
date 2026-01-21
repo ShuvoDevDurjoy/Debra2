@@ -101,7 +101,7 @@ int main()
     dot3->setStrokeWidth(3.0f);
     dot4->setStrokeWidth(4.0f);
     dot5->setStrokeWidth(5.0f);
-    // graph->play(dot0);
+    graph->play(dot0);
     // graph->play(new ShowCreation(dot0, 18, 5));
     // graph->play(new ShowCreation(dot1, 3, 5));
     // graph->play(new ShowCreation(dot2, 6, 5));
@@ -109,7 +109,7 @@ int main()
     // graph->play(new ShowCreation(dot4, 12, 5));
     // graph->play(new ShowCreation(dot5, 15, 5));
     // graph->play(dot1);
-    // graph->play(dot2);
+    graph->play(dot2);
     // graph->play(dot3);
     // graph->play(dot4);
     // graph->play(dot5);
@@ -124,7 +124,7 @@ int main()
     v.addVar(10.0f);
 
     TestObject *test = new TestObject();
-    test->range = {-5.0f * M_PI, 6.0f * M_PI};
+    test->range = {5.0f * M_PI, 6.0f * M_PI};
     test->generatePoints(butterflyCurve, v);
     // test->setPoints(glm::vec3(-30, -30, 0));
     // test->setPoints(glm::vec3(-30, 30, 0));
@@ -136,20 +136,21 @@ int main()
     // test->setPoints(glm::vec3(50, 8, 0));
     // test->setPoints(glm::vec3(55, 20, 0));
     TestObject *test1 = new TestObject();
-    test1->resolution = 2500;
+    // test1->resolution = 100;
     test1->generatePoints([](float t, Var v)
-                         { float x = 50 * t; float y = 5.0f * sin(x * 5.0f);
+                         { float x = 50 * t; float y = 5.0f * sin(x * 0.5f);
                         float z = 0;
                     return glm::vec3(x, y, z); }, v);
+    // test->resolution = 500;
     test->generatePoints(butterflyCurve, v);
 
     test1->fillOpacity = 0;
-    graph->play(test1);
+    // graph->play(test1);
     test->fillOpacity = 0;
     test1->setStrokeWidth(1.0f);
-    test->setStrokeWidth(10.0f);
-    graph->play(test);
-    graph->play(new ShowCreation(test, 0, 10));
+    test->setStrokeWidth(3.0f);
+    // graph->play(test);
+    // graph->play(new ShowCreation(test, 0, 10));
 
     float L = 30.0f;
     Line *x_pos_to_neg = new Line(glm::vec3(L, 0, 0), glm::vec3(-L, 0, 0));
@@ -164,24 +165,28 @@ int main()
     GraphColor color1 = GraphColor(0, 1, 1);
     GraphColor color2 = GraphColor(1, 1, 0);
 
+    Line *ro = new Line(glm::vec3(0, 0, 0), glm::vec3(25, 0, 0));
+    graph->play(ro);
+    graph->play(new Rotation(ro, glm::vec3(0, 180, 0), glm::vec3(0, 0, 0), 0, 5));
+
     x_pos_to_neg->setColor(color1);
     y_pos_to_neg->setColor(color2);
 
     int offset = 10;
-    for (int i = 0; i < 2; ++i)
-    {
-        Line *line = new Line(glm::vec3(-offset + i * offset * 2, offset * 3, 0), glm::vec3(-offset + i * offset * 2, -offset * 3, 0));
-        line->setColor({color1, color2});
-        graph->play(line);
-        line->showGraph = false;
-        graph->play(new ShowCreation(line, i * 2, 5));
+    // for (int i = 0; i < 2; ++i)
+    // {
+    //     Line *line = new Line(glm::vec3(-offset + i * offset * 2, offset * 3, 0), glm::vec3(-offset + i * offset * 2, -offset * 3, 0));
+    //     line->setColor({color1, color2});
+    //     graph->play(line);
+    //     line->showGraph = false;
+    //     graph->play(new ShowCreation(line, i * 2, 5));
 
-        Line *liney = new Line(glm::vec3(-offset * 3, -offset + i * offset * 2, 0), glm::vec3(offset * 3, -offset + i * offset * 2, 0));
-        liney->setColor({color1, color2});
-        graph->play(liney);
-        liney->showGraph = false;
-        graph->play(new ShowCreation(liney, i * 2, 5));
-    }
+    //     Line *liney = new Line(glm::vec3(-offset * 3, -offset + i * offset * 2, 0), glm::vec3(offset * 3, -offset + i * offset * 2, 0));
+    //     liney->setColor({color1, color2});
+    //     graph->play(liney);
+    //     liney->showGraph = false;
+    //     graph->play(new ShowCreation(liney, i * 2, 5));
+    // }
 
 
     graph->run();

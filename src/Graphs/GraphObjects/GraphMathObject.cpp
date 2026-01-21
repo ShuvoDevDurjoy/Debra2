@@ -108,7 +108,7 @@ void GraphMathObject::rotate(glm::vec3 rotation_amount, glm::vec3 pivot)
 {
     setRotation(rotation_amount, pivot);
     // ***
-    // updatePoints();
+    updatePoints();
 }
 
 void GraphMathObject::setTranslate(glm::vec3 trans)

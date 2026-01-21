@@ -38,7 +38,7 @@ vec3 norm3(vec3 v){
     return v / len;
 }
 
-const float CURVE_THRESHOLD = radians(90); // good default
+const float CURVE_THRESHOLD = radians(12.0); // good default
 
 
 // vec3 pickOrthogonal(vec3 v)
@@ -182,7 +182,7 @@ void main()
     float bias = 0.5; // default center
     
     bias = (0.5 + 0.5 * (tNext - tPrev) / totalBend); 
-    float controlX = 0.5;
+    float controlX = segLen * 0.5;
     //user_bezier_always == 1.0 && (abs(theta) <=radians(45.0))) ||
     if((useBezier && !isStart && !isEnd)){
         controlY = (isStart ? 0.01 + tan(theta * 0.5): 0.01 + tan(theta * 0.5) * segLen * 0.5);

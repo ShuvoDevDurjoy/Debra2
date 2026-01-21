@@ -232,9 +232,12 @@ void GraphApp::onMouseMoveCallback(MouseEvent event)
 
 void GraphApp::onKeyPressedOnceCallback(const KeyEvent &event)
 {
+    float inc_thr = 2.0f;
+    if(cameraPos.z > 20)
+        inc_thr = 5.0f;
     if (event.key == GLFW_KEY_F && cameraPos.z > 0)
     {
-        cameraPos.z -= 5.0f;
+        cameraPos.z -= inc_thr;
     }
     else if (event.key == GLFW_KEY_B)
     {
