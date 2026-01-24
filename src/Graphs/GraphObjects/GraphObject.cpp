@@ -196,7 +196,7 @@ void GraphObject::setStrokeData()
         stroke_current_points.push_back(points[i]);
     }
 
-    if (isEqual(points[0], points[getSize() - 1]) && getSize() >=2 )
+    if (isEqual(points[0], points[getSize() - 1]) && getSize() >= 2)
     {
         stroke_prev_points.push_back(points[getSize() - 2]);
     }
@@ -339,7 +339,7 @@ void GraphObject::setFillData()
 
 void GraphObject::applyColorToVertex()
 {
-    int n =getSize();
+    int n = getSize();
     stroke_color_array.resize(n);
 
     std::cout << "Graph Color size is: " << colors.size() << std::endl;
@@ -563,7 +563,6 @@ void GraphObject::updateFillPoints()
 void GraphObject::updatePoints()
 {
 
-    std::cout << "This is updating points" << std::endl;
     updateStrokePoints();
     updateFillPoints();
 
@@ -624,4 +623,46 @@ void GraphObject::interpolate(int number)
     InitFillData();
 
     std::cout << "Fill size is: " << getFillSize() << std::endl;
+}
+
+glm::vec3 GraphObject::getPosition(Position pos)
+{
+    glm::vec3 position;
+    switch (pos)
+    {
+    case LEFT:
+        position = glm::vec3(0, height / 2.0f, 0);
+        break;
+    case RIGHT:
+        position = glm::vec3(-width, height / 2.0f, 0);
+        break;
+    case TOP_LEFT:
+        position = glm::vec3(0, 0, 0);
+        break;
+    case BOTTOM_LEFT:
+        position = glm::vec3(0, height, 0);
+        break;
+    case TOP_RIGHT:
+        position = glm::vec3(-width, 0, 0);
+        break;
+    case BOTTOM_RIGHT:
+        position = glm::vec3(-width, height, 0);
+        break;
+    case TOP:
+        position = glm::vec3(-width / 2.0f, 0, 0);
+        break;
+    case BOTTOM:
+        position = glm::vec3(-width / 2.0f, height, 0);
+        break;
+    case NONE:
+        position = glm::vec3(-width / 2.0f, height / 2.0f, 0);
+    }
+
+    return position;
+}
+
+void GraphObject::nextTo(GraphObject* target, Position pos){
+    glm::vec3 position = target->getPosition(pos);
+
+    
 }

@@ -15,7 +15,7 @@ void ShowCreation::play(float dt)
         return;
     }
 
-    float prg = (AnimationTimmingFunction::linearProgress((dt - start_time), duration));
+    float prg = (anim_timing_func((dt - start_time), duration));
     targetObject->showGraph = true;
     targetObject->setStrokeProgress(prg < 0 ? 0 : prg);
     targetObject->setFillProgress(prg < 0 ? 0 : prg);
@@ -36,7 +36,7 @@ void ShowFillCreation::play(float dt)
         return;
     }
 
-    float prg = (AnimationTimmingFunction::easeInOutExpo((dt - start_time), duration));
+    float prg = (anim_timing_func((dt - start_time), duration));
 
     targetObject->setFillProgress(prg < 0 ? 0 : prg);
 }

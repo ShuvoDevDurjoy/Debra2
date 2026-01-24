@@ -89,7 +89,7 @@ protected:
 
     void updateStrokePoints() override;
     void updateFillPoints() override;
-    void updatePoints();
+    void updatePoints() override;
 
 public:
     GraphObject();
@@ -180,6 +180,10 @@ public:
 
     void scaleTo(float scale_ratio);
     void fit(float width, float height, float buff = 0.0f);
+
+    //positioning function related to this class not the parent class
+    glm::vec3 getPosition(Position pos = Position::NONE);
+    void nextTo(GraphObject *target, Position pos = Position::NONE);
 };
 
 #endif

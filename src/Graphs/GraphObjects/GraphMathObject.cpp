@@ -47,7 +47,7 @@ void GraphMathObject::moveTo(glm::vec3 newPos)
 {
     translate = newPos - glm::vec3(x, y, 0);
     //<<<<< This must be implement later for animation purpose ***
-    // updatePoints();
+    updatePoints();
 }
 
 void GraphMathObject::moveTo(Position pos)

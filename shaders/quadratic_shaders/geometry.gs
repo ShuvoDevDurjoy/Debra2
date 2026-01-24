@@ -72,12 +72,39 @@ vec3 pickOrthogonal(vec3 v)
         return vec3(0, 1, 0);
     }
 }
+bool intersectSegments3D(
+    vec3 P0, vec3 P1,
+    vec3 Q0, vec3 Q1,
+    out vec3 I
+) {
+    vec3 U = P1 - P0;
+    vec3 V = Q1 - Q0;
+    vec3 W0 = P0 - Q0;
+
+    vec3 N = cross(U, V);
+    float denom = dot(N, N);
+
+    // Parallel
+    if (denom < 1e-6) return false;
+
+    // Not coplanar
+    if (abs(dot(W0, N)) > 1e-6) return false;
+
+    float t = dot(cross(W0, V), N) / denom;
+    float s = dot(cross(W0, U), N) / denom;
+
+    if (t < 0.0 || t > 1.0 || s < 0.0 || s > 1.0)
+        return false;
+
+    I = P0 + t * U;
+    return true;
+}
 
 
 
 void main()
 {
-    if(uProgress <= 0.001) return;
+    if(uProgress <= 0.01) return;
 
 
     float prevProg = float(vId[0]) / float(vertexCount - 1);
@@ -106,20 +133,22 @@ void main()
 
     // --- stable perpendicular ---
     vec3 planeN = norm3(cross(d1, d0));
-    if(length(planeN) < 1e-4){
+
+
+    if(length(planeN) < 1e-3){
         vec3 ref = vec3(0, 0, -1);
-        if(dot((P1 - P0), vec3(0, 1, 0)) < 0.001){
-            ref = vec3(-1, 0, 0);
-        }
-        else if(dot((P1 - P0), vec3(0, -1, 0)) < 0.001){
-            ref = vec3(-1, 0, 0);
-        }
-        else if(dot((P1 - P0), vec3(1, 0, 0)) < 0.001){
-            ref = vec3(1, 1, 0);
-        }
-        else if(dot((P1 - P0), vec3(-1, 0, 0)) < 0.001){
-            ref = vec3(0, -1, 0);
-        }
+        // if(dot((P1 - P0), vec3(0, 1, 0)) < 0.001){
+        //     ref = vec3(-1, 0, 0);
+        // }
+        // else if(dot((P1 - P0), vec3(0, -1, 0)) < 0.001){
+        //     ref = vec3(-1, 0, 0);
+        // }
+        // else if(dot((P1 - P0), vec3(1, 0, 0)) < 0.001){
+        //     ref = vec3(1, 1, 0);
+        // }
+        // else if(dot((P1 - P0), vec3(-1, 0, 0)) < 0.001){
+        //     ref = vec3(0, -1, 0);
+        // }
 
         ref = pickOrthogonal(d1);
         planeN = cross(d1, ref);
@@ -134,11 +163,10 @@ void main()
     vec3 miterEnd   = isEnd   ? norm3(perp1 + perp2) : norm3(perp1 + perp2);
 
     float segLen = length(P1-P0);
-    // if(segLen < 0.0001) return;
-    float miterLimit = max(u_line_width, segLen * 0.5);
+    float miterLimit = min(u_line_width, segLen * 0.45);
 
-    float miterScaleStart = isStart ? 1.0 : 1.0 / max(dot(miterStart, perp1), 0.25);
-    float miterScaleEnd   = isEnd   ? 1.0 : 1.0 / max(dot(miterEnd, perp1), 0.25);
+    float miterScaleStart = isStart ? 1.0 : 1.0 / max(abs(dot(miterStart, perp1)), 0.25);
+    float miterScaleEnd   = isEnd   ? 1.0 : 1.0 / max(abs(dot(miterEnd, perp1)), 0.25);
 
     float halfW = u_line_width * 0.5;
     float lengthStart = halfW * miterScaleStart;
@@ -146,8 +174,10 @@ void main()
 
     float ratio = lengthStart / lengthEnd;
 
-    lengthStart = min(lengthStart, miterLimit);
-    lengthEnd = min(lengthEnd, miterLimit);
+    float safetyCap = 0.5;
+
+    // lengthStart = min(lengthStart, miterLimit);
+    // lengthEnd = min(lengthEnd, miterLimit);
 
     float epsilon = 0.1;
     vec3 offsetStart = miterStart * lengthStart ;
@@ -184,8 +214,8 @@ void main()
     bias = (0.5 + 0.5 * (tNext - tPrev) / totalBend); 
     float controlX = segLen * 0.5;
     //user_bezier_always == 1.0 && (abs(theta) <=radians(45.0))) ||
-    if((useBezier && !isStart && !isEnd)){
-        controlY = (isStart ? 0.01 + tan(theta * 0.5): 0.01 + tan(theta * 0.5) * segLen * 0.5);
+    if(user_bezier_always == 1.0 || (useBezier && !isStart && !isEnd)){
+        controlY = (isStart ? 0.01 + tan(theta * 0.5):tan(theta * 0.5) * segLen * 0.5);
         controlX = segLen * bias;
     }
 
@@ -193,20 +223,41 @@ void main()
 
     prepStart = vec2(0.0,0.0);
     prevEnd = vec2(segLen,0.0);
-    stroke_width = halfW * 0.5;
+    stroke_width = halfW;
 
     // --- Expand quad to cover curve at corners ---
-    float safeControlY = clamp(abs(controlY), 0.0, segLen * 0.5);
+    float safeControlY = clamp(abs(controlY), 0.0, halfW );
     // float rate = safeControlY / controlY;
-    float expand = 0.5 + (safeControlY / halfW);
-    expand = max(0.5, expand);
-    // float expand = 0.5 +  abs(controlY)/halfW;
-    float curvature = abs(tPrev) + abs(tNext);
+    // float expand = 0.5 + abs(safeControlY / halfW);
+    // if(segLen < u_line_width * 2.0) {
+    //     // Smoothly reduce expansion as segments get tiny to prevent "blocky" artifacts
+    //     expand = mix(1.0, expand, clamp(segLen / (u_line_width * 2.0), 0.0, 1.0));
+    // }
+    // expand = max(0.5, expand);
+    float expand = 0.5 +  abs(controlY)/halfW;
+    // float curvature = abs(tPrev) + abs(tNext);
+
+    // float narrowing = clamp(1.0 - (curvature * 0.2), 0.5, 1.0); 
+    // stroke_width = halfW * 0.5 * narrowing;
 
     vec3 p0 = P0 - offsetStart * expand ;
     vec3 p1 = P0 + offsetStart * expand;
     vec3 p2 = P1 - offsetEnd * expand;
     vec3 p3 = P1 + offsetEnd * expand;
+
+    vec3 I;
+    if(intersectSegments3D(P0, p0, P1, p2, I)){
+        vec3 temp = p0;
+        p0 = p2;
+        p2 = temp;
+    }
+    if(intersectSegments3D(P0, p1, P1, p3, I)){
+        vec3 temp = p1;
+        p1 = p3;
+        p3 = temp;
+    }
+
+    // vec3 center_min_top = 
 
     // --- Local 2D basis ---
     vec3 T = d1;
@@ -218,7 +269,7 @@ void main()
     pCurrent = vec2(dot(local,T), dot(local,N));
     pProgress = 0.0; outColor = gs_in[0].color;
     vec4 clip = pvm*vec4(p0, 1.0); 
-    clip.z -= z_bias * clip.w;
+    // clip.z -= z_bias * clip.w;
     gl_Position = clip;
     EmitVertex();
 
@@ -226,7 +277,7 @@ void main()
     pCurrent = vec2(dot(local,T), dot(local,N));
     pProgress = 0.0; outColor = gs_in[0].color;
     clip = pvm*vec4(p1,1.0); 
-    clip.z -= z_bias * clip.w;
+    // clip.z -= z_bias * clip.w;
     gl_Position = clip;
     EmitVertex();
 
@@ -234,7 +285,7 @@ void main()
     pCurrent = vec2(dot(local,T), dot(local,N));
     pProgress = 1.0; outColor = gs_in[1].color;
     clip = pvm*vec4(p2, 1.0);
-    clip.z -= z_bias * clip.w;
+    // clip.z -= z_bias * clip.w;
     gl_Position = clip; 
     EmitVertex();
 
@@ -242,7 +293,7 @@ void main()
     pCurrent = vec2(dot(local,T), dot(local,N));
     pProgress = 1.0; outColor = gs_in[1].color;
     clip = pvm*vec4(p3, 1.0); 
-    clip.z -= z_bias * clip.w;
+    // clip.z -= z_bias * clip.w;
     gl_Position = clip;
     EmitVertex();
 

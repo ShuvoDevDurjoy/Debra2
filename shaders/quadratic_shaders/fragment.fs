@@ -85,9 +85,7 @@ float sdBezier( in vec2 pos, in vec2 A, in vec2 B, in vec2 C )
     return sqrt( res );
 }
 
-void main()
-{
-
+void runMain(){
     float edge = pProgress - progress;
 
     // screen-space adaptive smoothing
@@ -95,7 +93,7 @@ void main()
 
     float alpha1 = 1.0 - smoothstep(-w, w, edge);
 
-    if (alpha1 <= 0.1)
+    if (alpha1 <= 0.01)
         discard;
 
 
@@ -112,5 +110,73 @@ float alpha = smoothstep(radius + radius * 0.5,
 if(alpha <= 0.01) discard;
 
 FragColor = vec4(outColor, alpha);
+
+
+}
+
+void debugMain(){
+
+    float edge = pProgress - progress;
+
+    // screen-space adaptive smoothing
+    float w = fwidth(pProgress);
+
+    float alpha1 = 1.0 - smoothstep(-w, w, edge);
+
+    if (alpha1 <= 0.01)
+        discard;
+
+
+
+//     float d = sdBezier(pCurrent.xy,
+//                    prepStart,
+//                    perpControl,
+//                    prevEnd);
+
+// float radius = stroke_width * 0.25;
+// float alpha = smoothstep(radius + radius * 0.5,
+//                          radius - radius * 0.5,
+//                          d);
+// if(alpha <= 0.01) discard;
+
+FragColor = vec4(outColor, 1);
+
+}
+
+void debugMainWithBezier(){
+
+    float edge = pProgress - progress;
+
+    // screen-space adaptive smoothing
+    float w = fwidth(pProgress);
+
+    float alpha1 = 1.0 - smoothstep(-w, w, edge);
+
+    // if (alpha1 <= 0.0001)
+    //     discard;
+
+
+
+    float d = sdBezier(pCurrent,
+                   prepStart,
+                   perpControl,
+                   prevEnd);
+
+float radius = stroke_width * 0.5;
+float alpha = smoothstep(radius + radius * 0.5,
+                         radius - radius * 0.5,
+                         d);
+if(alpha <= 0.0001) discard;
+
+FragColor = vec4(outColor, 1);
+
+}
+
+void main()
+{
+
+    runMain();
+    // debugMain();
+    // debugMainWithBezier();
 
 }

@@ -254,7 +254,7 @@ void Rotation::play(float dt){
     if(! is_initialized)
     Init();
 
-    float progress = AnimationTimmingFunction::easeInOutExpo(dt - start_time, duration);
+    float progress = anim_timing_func(dt - start_time, duration);
     
     glm::vec3 current = glm::mix(startRot, rot_amount, progress);
     glm::vec3 rotFactor = current - currentRot;

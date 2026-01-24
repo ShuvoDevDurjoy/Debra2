@@ -10,6 +10,7 @@ int GraphApp::drawCount = 0;
 
 GraphApp::GraphApp()
 {
+    // window_height = 570;
     InitWindow();
     loadGLAD();
     InitTextRenderer();
@@ -41,7 +42,6 @@ int GraphApp::InitWindow()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    // glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);
 
     // create window
     window = glfwCreateWindow(window_width, window_height, "Shuvo Dev Durjoy", nullptr, nullptr);
@@ -55,7 +55,7 @@ int GraphApp::InitWindow()
     // Projection
     projection = glm::perspective(
         glm::radians(45.0f),
-        (window_width / window_height) * 1.0f, // replace with window ratio if needed
+        (window_width * 1.0f) / (window_height * 1.0f), // replace with window ratio if needed
         0.1f,
         500.0f);
 

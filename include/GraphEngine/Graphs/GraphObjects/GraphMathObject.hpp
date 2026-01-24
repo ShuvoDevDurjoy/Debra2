@@ -131,7 +131,7 @@ public:
 
 public:
     void setRotation(glm::vec3 rot_amount, glm::vec3 rot_pivot);
-    void updatePoints(){};
+    virtual void updatePoints() = 0;
 
 public:
     void setStrokeColors(std::vector<GraphColor> stroke_colors);

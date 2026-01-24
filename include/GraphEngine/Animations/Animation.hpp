@@ -25,6 +25,7 @@ public:
     GraphMathObject *targetObject;
     GraphMathObject *morphObject;
     bool is_initialized = false;
+    float (*anim_timing_func)(float, float) = AnimationTimmingFunction::easeInOutExpo;
 
 public:
     Animation(GraphMathObject *object, float start_time = 0.0f, float duration = 2.0f);
