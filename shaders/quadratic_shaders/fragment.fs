@@ -85,6 +85,15 @@ float sdBezier( in vec2 pos, in vec2 A, in vec2 B, in vec2 C )
     return sqrt( res );
 }
 
+// Fallback line segment distance for degenerate cases
+float sdSegment(vec2 p, vec2 a, vec2 b)
+{
+    vec2 pa = p - a;
+    vec2 ba = b - a;
+    float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
+    return length(pa - ba * h);
+}
+
 void runMain(){
     float edge = pProgress - progress;
 
@@ -96,22 +105,37 @@ void runMain(){
     if (alpha1 <= 0.01)
         discard;
 
+    // Calculate distance to bezier curve
+    // For nearly-straight segments (small controlY), use line distance
+    float d;
+    if(abs(perpControl.y) < 0.05) {
+        // Nearly straight: use line segment distance for stability
+        d = sdSegment(pCurrent.xy, prepStart, prevEnd);
+    } else {
+        // Curved segment: use proper bezier distance
+        d = sdBezier(pCurrent.xy, prepStart, perpControl, prevEnd);
+    }
+    
+    // Industry-standard stroke rendering:
+    // - Smooth edges with anti-aliasing
+    // - Proper falloff at stroke boundary
+    float radius = stroke_width;
+    
+    // Anti-aliasing width (in texture space)
+    // Scale AA based on curve type for consistent appearance
+    float aa_width = fwidth(d) * 1.2;
+    
+    // Smooth step from inner edge to outer edge
+    // This gives proper anti-aliased strokes even at sharp corners
+    float alpha = smoothstep(radius + aa_width, radius - aa_width, d);
+    
+    // Clamp to prevent over-bright pixels
+    alpha = clamp(alpha, 0.0, 1.0);
+    
+    if(alpha <= 0.01) discard;
 
-
-    float d = sdBezier(pCurrent.xy,
-                   prepStart,
-                   perpControl,
-                   prevEnd);
-
-float radius = stroke_width * 0.25;
-float alpha = smoothstep(radius + radius * 0.5,
-                         radius - radius * 0.5,
-                         d);
-if(alpha <= 0.01) discard;
-
-FragColor = vec4(outColor, alpha);
-
-
+    // Output with proper color
+    FragColor = vec4(outColor, alpha);
 }
 
 void debugMain(){

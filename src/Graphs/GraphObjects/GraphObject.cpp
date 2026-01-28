@@ -52,6 +52,10 @@ void GraphObject::updateStroke(float dt)
         stroke_shader->setFloat("uv_anti_alias_width_pass", 1.0f);
         stroke_shader->setFloat("user_bezier_always", use_bezier_always ? 1.0f : 0.0f);
         stroke_shader->setInt("u_layer", layer);
+        
+        // Pass industry-standard stroke properties to shader
+        stroke_shader->setFloat("uMiterLimit", miter_limit);
+        stroke_shader->setInt("uStrokeJoinStyle", static_cast<int>(stroke_join_style));
         glBindVertexArray(StrokeVAO);
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -631,10 +635,10 @@ glm::vec3 GraphObject::getPosition(Position pos)
     switch (pos)
     {
     case LEFT:
-        position = glm::vec3(0, height / 2.0f, 0);
+        position = glm::vec3(width / 2.0f, height / 4.0f, 0);
         break;
     case RIGHT:
-        position = glm::vec3(-width, height / 2.0f, 0);
+        position = glm::vec3(x - width, height / 2.0f, 0);
         break;
     case TOP_LEFT:
         position = glm::vec3(0, 0, 0);
@@ -663,6 +667,7 @@ glm::vec3 GraphObject::getPosition(Position pos)
 
 void GraphObject::nextTo(GraphObject* target, Position pos){
     glm::vec3 position = target->getPosition(pos);
-
-    
+    moveTo(position);
+    // setTranslate(position);
+    // updatePoints();
 }

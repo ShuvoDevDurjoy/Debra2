@@ -93,12 +93,12 @@ glm::vec3 circleEquation(float t, Var v){
 
 glm::vec3 PetalSpiral(float t, float dt)
 {
-    float speed = 1.0;
-    float x = t * 50.0f;
+    float speed = 5.0;
+    float z = t * 50.0f;
     float angle = t * 50.0f + dt * speed;
     float radius = 10.0f * sin(2.0f * t + dt * speed);
     float y = radius * sin(angle);
-    float z = radius * cos(angle);
+    float x = radius * cos(angle);
     return glm::vec3(x, y, z);
 };
 
@@ -199,19 +199,21 @@ int main()
     // ThreeDAxes *td = new ThreeDAxes();
     // graph->play(td);
 
-    Dot *dot0 = new Dot(0, 0, 25, 32);
-    Dot *dot1 = new Dot(0, 0, 30, 3);
-    Dot *dot2 = new Dot(0, 0, 30, 4);
+    Dot *dot0 = new Dot(0, 0, 10, 32);
+    Dot *dot1 = new Dot(-10, -10, 5, 32);
+    Dot *dot2 = new Dot(0, 0, 30, 5);
     Dot *dot3 = new Dot(0, 0, 15, 5);
     Dot *dot4 = new Dot(0, 0, 20, 6);
     Dot *dot5 = new Dot(0, 0, 25, 13);
-    dot0->setStrokeWidth(3.0f);
+    dot0->setStrokeWidth(0.5f);
     dot1->setStrokeWidth(3.0f);
-    dot2->setStrokeWidth(2.0f);
+    dot2->setStrokeWidth(0.5f);
     dot3->setStrokeWidth(3.0f);
     dot4->setStrokeWidth(4.0f);
     dot5->setStrokeWidth(5.0f);
     graph->play(dot0);
+
+    std::cout << dot0->x << ", " << dot0->y << ", " << dot0->width << ", " << dot0->height << std::endl;
     // graph->play(new ShowCreation(dot0, 18, 5));
     // graph->play(new ShowCreation(dot1, 3, 5));
     // graph->play(new ShowCreation(dot2, 6, 5));
@@ -220,6 +222,8 @@ int main()
     // graph->play(new ShowCreation(dot5, 15, 5));
     // graph->play(dot1);
     // graph->play(dot2);
+    // dot1->nextTo(dot0, Position::LEFT);
+    // dot1->setMoveTo(glm::vec3(0, 0, 0));
     // graph->play(dot3);
     // graph->play(dot4);
     // graph->play(dot5);
@@ -235,7 +239,7 @@ int main()
 
     TestObject *test = new TestObject();
     test->range = {0.0f, 2.0f * M_PI};
-    // test->generatePoints(circleEquation, v);
+    test->generatePoints(butterflyCurve, v);
     // test->setPoints(glm::vec3(-30, -30, 0));
     // test->setPoints(glm::vec3(-30, 30, 0));
     // test->setPoints(glm::vec3(-40, 10, 0));
@@ -246,30 +250,34 @@ int main()
     // test->setPoints(glm::vec3(50, 8, 0));
     // test->setPoints(glm::vec3(55, 20, 0));
     TestObject *test1 = new TestObject();
-    test1->resolution = 1000;
+    test1->resolution = 2000;
     test1->generatePoints([](float t, Var v)
-                         { float x = 50.0f * t; float y = 5.0f + 5.0f * sin(x * 0.5f);
+                         { float x = 30.0f * t; float y = 5.0f + 5.0f * sin(5.0f * x);
                         float z = 0;
                     return glm::vec3(x, y, z); }, v);
+    
+    // Use BEVEL join style for smooth curves to avoid artifacts
+    // test1->setStrokeJoinStyle(GraphMathObject::StrokeJoinStyle::BEVEL);
+    // test1->setMiterLimit(1.5f);  // Tight limit for smooth rendering
     // test->resolution = 500;
     // test1->generatePoints(butterflyCurve, v);
     // test1->setUpdater(WavingTube, 0, -1);
     // test1->setUpdater(TwistingRibbon, 0, -1);
     // test1->setUpdater(RollingWave, 0, -1);
-    test1->setUpdater(Corkscrew, 0, -1);
-    test1->setUpdater(OceanRipple, 0, -1);
-    // test1->setUpdater(PetalSpiral, 0, -1);
+    // test1->setUpdater(Corkscrew, 0, -1);
+    // test1->setUpdater(OceanRipple, 0, -1);
+    // test1->setUpdater(PetalSpiral, 0, 10);
 
     test1->fillOpacity = 0;
     graph->play(test1);
     test->fillOpacity = 0;
-    test1->setStrokeWidth(3.0f);
-    test->setStrokeWidth(3.0f);
-    graph->play(test);
-    // Animation *anim1 = new ShowCreation(test1, 0, 2);
-    Animation *anim2 = new ShowCreation(test1, 0, 5);
-    // anim1->anim_timing_func = AnimationTimmingFunction::linearProgress;
-    anim2->anim_timing_func = AnimationTimmingFunction::easeInOutExpo;
+    test1->setStrokeWidth(0.05f);
+    test->setStrokeWidth(0.5f);
+    // graph->play(test);
+    Animation *anim1 = new ShowCreation(test1, 0, 20);
+    // Animation *anim2 = new ShowCreation(test1, 0, 5);
+    anim1->anim_timing_func = AnimationTimmingFunction::linearProgress;
+    // anim2->anim_timing_func = AnimationTimmingFunction::easeInOutExpo;
 
     float L = 30.0f;
     Line *x_pos_to_neg = new Line(glm::vec3(L, 0, 0), glm::vec3(-L, 0, 0));
@@ -301,13 +309,15 @@ int main()
     //     line->setColor({color1, color2});
     //     graph->play(line);
     //     line->showGraph = false;
-    //     graph->play(new ShowCreation(line, i * 2, 5));
+    //     line->setStrokeWidth(0.5f);
+    //     graph->play(new ShowCreation(line, 0, 5));
 
     //     Line *liney = new Line(glm::vec3(-offset * 3, -offset + i * offset * 2, 0), glm::vec3(offset * 3, -offset + i * offset * 2, 0));
     //     liney->setColor({color1, color2});
     //     graph->play(liney);
     //     liney->showGraph = false;
-    //     graph->play(new ShowCreation(liney, i * 2, 5));
+    //     liney->setStrokeWidth(0.5f);
+    //     graph->play(new ShowCreation(liney, 0, 5));
     // }
 
 

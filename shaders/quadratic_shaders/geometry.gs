@@ -10,6 +10,8 @@ uniform mat4 model;
 uniform float u_line_width;
 uniform int vertexCount;
 uniform int u_layer;
+uniform float uMiterLimit = 2.0;
+uniform int uStrokeJoinStyle = 0;  // 0=MITER, 1=BEVEL, 2=ROUND
 
 out vec2 perpControl;
 out vec2 prepStart;
@@ -40,25 +42,6 @@ vec3 norm3(vec3 v){
 
 const float CURVE_THRESHOLD = radians(12.0); // good default
 
-
-// vec3 pickOrthogonal(vec3 v)
-// {
-//     // v must be normalized
-//     if (abs(v.x) < abs(v.y))
-//     {
-//         if (abs(v.x) < abs(v.z))
-//             return vec3(0, 0, 1);
-//         else
-//             return vec3(1, 0, 0);
-//     }
-//     else
-//     {
-//         if (abs(v.y) < abs(v.z))
-//             return vec3(0, 0, 1);
-//         else
-//             return vec3(0, 1, 0);
-//     }
-// }
 
 vec3 pickOrthogonal(vec3 v)
 {
@@ -106,15 +89,12 @@ void main()
 {
     if(uProgress <= 0.01) return;
 
-
     float prevProg = float(vId[0]) / float(vertexCount - 1);
     float nextProg = float(vId[1]) / float(vertexCount - 1);
     if(uProgress <= prevProg) return;
     progress = clamp((uProgress - prevProg)/(nextProg - prevProg), 0.0, 1.0);
     float selfBias = float(vId[0]) * 1e-6;
     float z_bias = float(u_layer + vId[0]) * 1e-6;
-    // z_bias = z_bias - selfBias;
-
 
     mat4 pvm = projection * view * model;
 
@@ -134,39 +114,44 @@ void main()
     // --- stable perpendicular ---
     vec3 planeN = norm3(cross(d1, d0));
 
-
+    // Handle degenerate cases with better fallback
     if(length(planeN) < 1e-3){
-        vec3 ref = vec3(0, 0, -1);
-        // if(dot((P1 - P0), vec3(0, 1, 0)) < 0.001){
-        //     ref = vec3(-1, 0, 0);
-        // }
-        // else if(dot((P1 - P0), vec3(0, -1, 0)) < 0.001){
-        //     ref = vec3(-1, 0, 0);
-        // }
-        // else if(dot((P1 - P0), vec3(1, 0, 0)) < 0.001){
-        //     ref = vec3(1, 1, 0);
-        // }
-        // else if(dot((P1 - P0), vec3(-1, 0, 0)) < 0.001){
-        //     ref = vec3(0, -1, 0);
-        // }
-
-        ref = pickOrthogonal(d1);
-        planeN = cross(d1, ref);
-        // planeN = norm3(cross(d1, ref));
+        vec3 ref = pickOrthogonal(d1);
+        planeN = norm3(cross(d1, ref));
+        
+        // If still degenerate, use safe default
+        if(length(planeN) < 1e-3) {
+            planeN = vec3(0, 0, 1);
+        }
     }
 
     vec3 perp0 = norm3(cross(planeN, d0));
     vec3 perp1 = norm3(cross(planeN, d1));
     vec3 perp2 = norm3(cross(planeN, d2));
+    
+    // Ensure perpendiculars are valid
+    if(length(perp0) < 1e-3) perp0 = perp1;
+    if(length(perp2) < 1e-3) perp2 = perp1;
 
     vec3 miterStart = isStart ? norm3(perp1 + perp0) : norm3(perp0 + perp1);
     vec3 miterEnd   = isEnd   ? norm3(perp1 + perp2) : norm3(perp1 + perp2);
+    
+    // Fallback for degenerate miters
+    if(length(miterStart) < 1e-3) miterStart = perp1;
+    if(length(miterEnd) < 1e-3) miterEnd = perp1;
 
     float segLen = length(P1-P0);
-    float miterLimit = min(u_line_width, segLen * 0.45);
-
+    
+    // Use shader uniform for miter limit (industry-standard: 2.0-4.0)
+    float MITER_LIMIT = uMiterLimit; 
+    
+    // Calculate proper miter scale with clamping
     float miterScaleStart = isStart ? 1.0 : 1.0 / max(abs(dot(miterStart, perp1)), 0.25);
     float miterScaleEnd   = isEnd   ? 1.0 : 1.0 / max(abs(dot(miterEnd, perp1)), 0.25);
+    
+    // Extra safety clamp
+    miterScaleStart = max(0.5, min(miterScaleStart, MITER_LIMIT));
+    miterScaleEnd = max(0.5, min(miterScaleEnd, MITER_LIMIT));
 
     float halfW = u_line_width * 0.5;
     float lengthStart = halfW * miterScaleStart;
@@ -203,7 +188,11 @@ void main()
     // if(segLen <= stroke_width * 2) return;
     float controlY = 0.01;
     // float controlY = 0.01;
-    bool useBezier = abs(theta) < CURVE_THRESHOLD;
+    
+    // Industry-standard sharp corner detection
+    // Use stricter threshold for sharper corners
+    const float SHARP_CORNER_THRESHOLD = radians(25.0); // 25 degree threshold
+    bool useBezier = abs(theta) < SHARP_CORNER_THRESHOLD;
 
     float tPrev = tan(anglePrev * 0.5);
     float tNext = tan(angleNext * 0.5);
@@ -211,12 +200,29 @@ void main()
     float totalBend = abs(tPrev) + abs(tNext);
     float bias = 0.5; // default center
     
-    bias = (0.5 + 0.5 * (tNext - tPrev) / totalBend); 
+    // Improved bias calculation that handles sharp corners better
+    if(totalBend > 0.01) {
+        bias = clamp(0.5 + 0.5 * (tNext - tPrev) / totalBend, 0.1, 0.9);
+    }
     float controlX = segLen * 0.5;
-    //user_bezier_always == 1.0 && (abs(theta) <=radians(45.0))) ||
-    if(user_bezier_always == 1.0 || (useBezier && !isStart && !isEnd)){
-        controlY = (isStart ? 0.01 + tan(theta * 0.5):tan(theta * 0.5) * segLen * 0.5);
+    
+    // For sharp corners, use minimal bezier curve or straight line segment
+    if(user_bezier_always == 1.0) {
+        if(abs(theta) <= radians(60.0)) {
+            controlY = tan(theta * 0.5) * segLen * 0.4;
+            controlX = segLen * bias;
+        } else {
+            // Very sharp corner: minimize curve
+            controlY = sign(theta) * 0.005 * u_line_width;
+            controlX = segLen * 0.5;
+        }
+    } else if(useBezier && !isStart && !isEnd) {
+        controlY = tan(theta * 0.5) * segLen * 0.5;
         controlX = segLen * bias;
+    } else if(abs(theta) > radians(45.0) && !isStart && !isEnd) {
+        // Ultra-sharp corner: use bevel instead of curve
+        controlY = 0.0;
+        controlX = segLen * 0.5;
     }
 
     perpControl = vec2(controlX, controlY);
@@ -225,20 +231,25 @@ void main()
     prevEnd = vec2(segLen,0.0);
     stroke_width = halfW;
 
-    // --- Expand quad to cover curve at corners ---
-    float safeControlY = clamp(abs(controlY), 0.0, halfW );
-    // float rate = safeControlY / controlY;
-    // float expand = 0.5 + abs(safeControlY / halfW);
-    // if(segLen < u_line_width * 2.0) {
-    //     // Smoothly reduce expansion as segments get tiny to prevent "blocky" artifacts
-    //     expand = mix(1.0, expand, clamp(segLen / (u_line_width * 2.0), 0.0, 1.0));
-    // }
-    // expand = max(0.5, expand);
-    float expand = 0.5 +  abs(controlY)/halfW;
-    // float curvature = abs(tPrev) + abs(tNext);
-
-    // float narrowing = clamp(1.0 - (curvature * 0.2), 0.5, 1.0); 
-    // stroke_width = halfW * 0.5 * narrowing;
+    // --- Expand quad to cover curve at corners (industry-standard approach) ---
+    // The expansion must be sufficient to cover the bezier curve
+    float safeControlY = clamp(abs(controlY), 0.0, halfW * 1.5);
+    
+    // Calculate expansion based on bezier control point offset
+    // Smoother, more conservative expansion to avoid artifacts
+    float expand = 1.0;
+    if(abs(controlY) > 0.05) {
+        // Only expand for meaningful curves
+        expand = 1.0 + clamp(abs(controlY) / (halfW * 2.0), 0.0, 0.6);
+    }
+    
+    // For very tight curves, minimize expansion to reduce artifacts
+    if(abs(theta) > radians(40.0)) {
+        expand = min(expand, 1.2);  // Limit expansion at sharp corners
+    }
+    
+    // Overall cap to prevent excessive vertex displacement
+    expand = min(expand, 1.5);
 
     vec3 p0 = P0 - offsetStart * expand ;
     vec3 p1 = P0 + offsetStart * expand;

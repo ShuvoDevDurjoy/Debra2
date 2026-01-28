@@ -87,6 +87,11 @@ void GraphMathObject::moveTo(Position pos)
     moveTo(translate);
 }
 
+void GraphMathObject::setMoveTo(glm::vec3 pos){
+    translate = pos - glm::vec3(x, y, 0);
+    updatePoints();
+}
+
 void GraphMathObject::scaleTo(glm::vec3 scale_factor)
 {
     this->scale_x = scale_factor.x;

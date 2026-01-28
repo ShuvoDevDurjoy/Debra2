@@ -53,6 +53,16 @@ public:
     float scale_x = 1, scale_y = 1, scale_z = 1;
 
     bool is_initialized = false;
+    
+    // Industry-standard stroke join styles
+    enum class StrokeJoinStyle {
+        MITER = 0,      // Sharp corners (default)
+        BEVEL = 1,      // Beveled/cut corners
+        ROUND = 2       // Rounded corners
+    };
+    
+    StrokeJoinStyle stroke_join_style = StrokeJoinStyle::MITER;
+    float miter_limit = 2.0f;  // Industry standard: 2.0-4.0
 
 public:
     // parameters for animation controlling
@@ -126,6 +136,7 @@ public:
     void setStrokeWidth(float);
     void moveTo(Position pos = Position::NONE);
     void moveTo(glm::vec3);
+    void setMoveTo(glm::vec3);
     void scaleTo(glm::vec3);
     void rotate(glm::vec3 rotation_amount = glm::vec3(0, 0, 0), glm::vec3 rotation_axis = glm::vec3(0, 0, 0));
 
@@ -140,6 +151,13 @@ public:
     std::pair<glm::vec3, glm::vec3> getFillColorIndex(int);
     void setStrokeColorLinearInterpolation(bool interpolate = true);
     void setFillColorLinearInterpolation(bool interpolate = true);
+    
+public:
+    // Industry-standard stroke styling methods
+    void setStrokeJoinStyle(StrokeJoinStyle style) { stroke_join_style = style; }
+    void setMiterLimit(float limit) { miter_limit = glm::clamp(limit, 1.0f, 10.0f); }
+    StrokeJoinStyle getStrokeJoinStyle() const { return stroke_join_style; }
+    float getMiterLimit() const { return miter_limit; }
 
     bool isEqual(glm::vec3 a, glm::vec3 b)
     {
