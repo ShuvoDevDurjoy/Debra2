@@ -1,29 +1,8 @@
-#include "../../include/GraphEngine/Graphs/ThreeDAxes.hpp"
+#include "../../include/GraphEngine/Graphs/GraphObjects/ThreeDAxes.hpp"
 
-ThreeDAxes::ThreeDAxes()
-{
-    this->shader = new Shader(vertexShaderPath, fragmentShaderPath);
 
-    color = GraphColor(0.67, 0.67, 0.67);
-    // color = GraphColor(1.0, 0.0, 0.0);
-
-    cameraPos = Vec3(0.0f, 0.0f, 100.0f);
-    // Perspective camera
-    view = glm::lookAt(
-        glm::vec3(cameraPos.x, cameraPos.y, cameraPos.z),
-        glm::vec3(0.0f, 0.0f, 0.0f),
-        glm::vec3(0.0f, 1.0f, 1.0f));
-
-    // Projection
-    projection = glm::perspective(
-        glm::radians(45.0f),
-        1.6f, // replace with window ratio if needed
-        0.1f,
-        500.0f);
-
-    // Model rotation
-    model = glm::mat4(1.0f);
-
+ThreeDAxes::ThreeDAxes(){
+    generatePoints();
 }
 
 void ThreeDAxes::generate(Vec3 start, Vec3 end)
@@ -127,7 +106,7 @@ void ThreeDAxes::generate(Vec3 start, Vec3 end)
     // std::cout << "Done here" << std::endl;
 }
 
-void ThreeDAxes::Init(float s_time)
+void ThreeDAxes::generatePoints()
 {
 
     const float Rx = 80.0f; // axis extent
@@ -146,83 +125,11 @@ void ThreeDAxes::Init(float s_time)
     generate(origin, Vec3(0.0f, 0.0f, Rz));
     // std::cout << "size is: " << getSize() << std::endl;
     generate(origin, Vec3(0.0f, 0.0f, -Rz));
-    // std::cout << "size is: " << getSize() << std::endl;
+    std::cout << "size is: " << getSize() << std::endl;
 
     if (getSize() == 0) // Corrected the check
     {
         std::cerr << "No points to initialize!\n";
         return;
     }
-
-    if (!shader)
-    {
-        std::cerr << "Shader not initialized!\n";
-        return;
-    }
-
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
-
-    glBindVertexArray(VAO);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-
-    glBufferData(GL_ARRAY_BUFFER, 6 * getSize() * sizeof(float), points.data(), GL_STATIC_DRAW);
-
-    // // Vertex layout: 3 floats per vertex (x, y, z)
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)0);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
-
-    initialized = true;
-}
-
-void ThreeDAxes::drawTick(float tick)
-{
-
-    if (!shader)
-    return;
-
-    shader->use();
-
-    projection = GraphApp::projection;
-    view = GraphApp::view;
-    model = glm::mat4(1.0f);
-    model = glm::rotate(model, glm::radians(GraphApp::rotX), glm::vec3(1, 0, 0));
-    model = glm::rotate(model, glm::radians(GraphApp::rotY), glm::vec3(0, 1, 0));
-    // std::cout << "here we are 1" << std::endl;
-    // Pass the matrices to the shader
-    shader->setMat4("model", model);
-    // // std::cout << "here we are 2" << std::endl;
-    shader->setMat4("view", view);
-    // // std::cout << "here we are 3" << std::endl;
-    shader->setMat4("projection", projection);
-    // // std::cout << "here we are 4" << std::endl;
-
-    shader->setVec3("objectColor", color.RED, color.GREEN, color.BLUE);
-    // // std::cout << "here we are 5" << std::endl;
-    shader->setVec3("lightPos", cameraPos.x, cameraPos.y, cameraPos.z);
-    // // std::cout << "here we are 6" << std::endl;
-    shader->setVec3("viewPos", cameraPos.x, cameraPos.y, cameraPos.z);
-    // // std::cout << "here we are 7" << std::endl;
-    shader->setVec3("lightColor", 1.0f, 0.8f, 0.8f);
-    // // std::cout << "here we are 8" << std::endl;
-
-    glBindVertexArray(VAO);
-    // glEnable(GL_DEPTH_TEST);
-    // glDepthFunc(GL_LEQUAL);
-    // glDepthMask(GL_FALSE);
-
-    // // std::cout << "here we are 9" << std::endl;
-    // Draw triangles (assumes points are arranged for triangle mesh)
-    glDrawArrays(GL_TRIANGLES, 0, getSize()/2);
-
-    // // std::cout << "here we are 10" << std::endl;
-
-    glBindVertexArray(0);
-    // glDisable(GL_DEPTH_TEST);
-    // // std::cout << "here we are 11" << std::endl;
 }

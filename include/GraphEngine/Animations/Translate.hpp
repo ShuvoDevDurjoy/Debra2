@@ -21,7 +21,7 @@ class Translate: public Animation{
 
         void Init();
 
-        void play(float dt);
+        void play(float dt) override;
 
         glm::vec3 getPivotPosition(Position);
 };

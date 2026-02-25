@@ -32,7 +32,7 @@ void GraphMathObject::setStrokeOpacity(float stroke_opacity)
 
 void GraphMathObject::setStrokeWidth(float stroke_width)
 {
-    this->line_width = stroke_width;
+    this->line_width = stroke_width * 0.5f;
 }
 
 void GraphMathObject::setScale(glm::vec3 scale_factor)

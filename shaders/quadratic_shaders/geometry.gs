@@ -40,7 +40,7 @@ vec3 norm3(vec3 v){
     return v / len;
 }
 
-const float CURVE_THRESHOLD = radians(12.0); // good default
+const float CURVE_THRESHOLD = radians(11.5); // good default
 
 
 vec3 pickOrthogonal(vec3 v)
@@ -191,7 +191,7 @@ void main()
     
     // Industry-standard sharp corner detection
     // Use stricter threshold for sharper corners
-    const float SHARP_CORNER_THRESHOLD = radians(25.0); // 25 degree threshold
+    const float SHARP_CORNER_THRESHOLD = radians(11.5); // 25 degree threshold
     bool useBezier = abs(theta) < SHARP_CORNER_THRESHOLD;
 
     float tPrev = tan(anglePrev * 0.5);
@@ -205,19 +205,50 @@ void main()
         bias = clamp(0.5 + 0.5 * (tNext - tPrev) / totalBend, 0.1, 0.9);
     }
     float controlX = segLen * 0.5;
+
+    /*
+    if(abs(theta) <= radians(80.0)) {
+        float rawY = tan(theta * 0.5) * u_line_width * 1.5; // scale by line width, not segLen
+        controlY = clamp(rawY, -u_line_width*2.0, u_line_width*2.0); // safe cap
+        // Bias keeps curve centered
+        float totalBend = abs(tan(anglePrev*0.5)) + abs(tan(angleNext*0.5));
+        float bias = 0.5;
+        if(totalBend > 0.01) {
+            bias = clamp(0.5 + 0.5*(tan(angleNext*0.5) - tan(anglePrev*0.5))/totalBend, 0.1, 0.9);
+        }
+        controlX = segLen * bias;
+        } else {
+        // Very sharp corners → almost straight line
+        controlY = sign(theta) * 0.5 * u_line_width; 
+        controlX = segLen * 0.5;
+        }
+
+    */
+
     
     // For sharp corners, use minimal bezier curve or straight line segment
     if(user_bezier_always == 1.0) {
-        if(abs(theta) <= radians(60.0)) {
-            controlY = tan(theta * 0.5) * segLen * 0.4;
+        if(abs(theta) <= radians(45.0)) {
+            float rawY = tan(theta * 0.5) * u_line_width * 0.5;
+            controlY = clamp(rawY, -u_line_width * 0.5, u_line_width * 0.5);
+            // controlY = tan(theta * 0.5) * u_line_width * 0.5;
+            float totalBend = abs(tan(anglePrev*0.5)) + abs(tan(angleNext*0.5));
+            float bias = 0.5;
+            if(totalBend > 0.01) {
+                bias = clamp(0.5 + 0.5*(tan(angleNext*0.5) - tan(anglePrev*0.5))/totalBend, 0.1, 0.9);
+            }
             controlX = segLen * bias;
         } else {
             // Very sharp corner: minimize curve
-            controlY = sign(theta) * 0.005 * u_line_width;
+            controlY = sign(theta) * 0.05 * u_line_width;
             controlX = segLen * 0.5;
         }
     } else if(useBezier && !isStart && !isEnd) {
-        controlY = tan(theta * 0.5) * segLen * 0.5;
+        controlY = tan(theta * 0.5) * segLen * 0.6;
+        // Clamp controlY to line width limits to avoid extreme curves
+        float maxY = u_line_width * 2.0;   // maximum allowed offset
+        float minY = u_line_width * 0.1;   // minimum to keep small circles smooth
+        controlY = clamp(controlY, minY, maxY);
         controlX = segLen * bias;
     } else if(abs(theta) > radians(45.0) && !isStart && !isEnd) {
         // Ultra-sharp corner: use bevel instead of curve
@@ -233,7 +264,7 @@ void main()
 
     // --- Expand quad to cover curve at corners (industry-standard approach) ---
     // The expansion must be sufficient to cover the bezier curve
-    float safeControlY = clamp(abs(controlY), 0.0, halfW * 1.5);
+    float safeControlY = clamp(abs(controlY), 0.0, halfW * 3.0);
     
     // Calculate expansion based on bezier control point offset
     // Smoother, more conservative expansion to avoid artifacts

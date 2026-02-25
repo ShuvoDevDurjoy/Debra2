@@ -2,7 +2,7 @@
 
 #include "../include/GraphEngine/Graphs/Coordinates/CylindricalCoordinate.hpp"
 #include "../include/GraphEngine/Graphs/Coordinates/CartesianCoordinate.hpp"
-#include "../include/GraphEngine/Graphs/ThreeDAxes.hpp"
+#include "../include/GraphEngine/Graphs/GraphObjects/ThreeDAxes.hpp"
 #include "../include/GraphEngine/Objects/Rectangle.hpp"
 #include "../include/GraphEngine/Objects/Polygon.hpp"
 #include "../include/GraphEngine/Graphs/GraphObjects/TestObject.hpp"
@@ -29,8 +29,8 @@ glm::vec3 generate(float r, float t, Var v)
 
 glm::vec3 torus(float u, float v, Var vars)
 {
-    float R = 20; // major radius
-    float r = 10; // minor radius
+    float R = vars[0]; // major radius
+    float r = vars[1]; // minor radius
 
     float x = (R + r * cos(u)) * cos(v);
     float y = r * sin(u);
@@ -55,8 +55,8 @@ glm::vec3 sphere(float r, float theta, Var vars)
     float phi = r;
 
     float x = R * sin(phi) * cos(theta);
-    float y = R * sin(phi) * sin(theta);
-    float z = R * cos(phi);
+    float z = R * sin(phi) * sin(theta);
+    float y = R * cos(phi);
 
     return glm::vec3(x, y, z);
 }
@@ -93,7 +93,7 @@ glm::vec3 circleEquation(float t, Var v){
 
 glm::vec3 PetalSpiral(float t, float dt)
 {
-    float speed = 5.0;
+    float speed = 1.0;
     float z = t * 50.0f;
     float angle = t * 50.0f + dt * speed;
     float radius = 10.0f * sin(2.0f * t + dt * speed);
@@ -165,7 +165,6 @@ auto RollingWave = [](float t, float dt) -> glm::vec3
 auto Corkscrew = [](float t, float dt) -> glm::vec3
 {
     float z = t * 30;
-    float radius = 4.0f + 2.0f * sin(dt * 0.7f);
     float angle = z * 0.5f + dt * 2.0f;
     float x = z * 0.5 * cos(angle);
     // float y = radius * cos(angle);
@@ -192,54 +191,318 @@ auto InfinityWave = [](float t, float dt) -> glm::vec3
     return glm::vec3(x, y, z);
 };
 
-int main()
+glm::vec3 chaoticFractal(float t, Var v)
+{
+    float x = sin(t) * cos(3 * t) + cos(t * t);
+    float y = cos(t) * sin(5 * t) - sin(t * t);
+    return {x * v[0], y * v[0], 0};
+}
+
+float amplitude = 6.0f;
+float sin_offset_left = -10.0f;
+float sin_offset_right = 10.0f;
+float circle_x_center = -40.0f;
+float duration = 30.0f;
+
+glm::vec3 sinGraph(float t, Var v){
+    float x = t;
+    float y = amplitude * sin(x);
+    return glm::vec3(x, y, 0);
+}
+
+glm::vec3 lineUpdater(float t, float dt){
+    float dis = (sin_offset_right - sin_offset_left) * M_PI;
+    if (t == 1)
+    {
+        float angle = 2.0f * M_PI * dt * (dis / (2.0f * M_PI));
+        float x = circle_x_center + amplitude * cos(angle);
+        float y = amplitude * sin(angle);
+
+        return glm::vec3(x, y, 0);
+    }
+    else{
+        return glm::vec3(circle_x_center, 0, 0);
+    }
+}
+
+glm::vec3 trackingLineUpdater(float t, float dt){
+    float dis = (sin_offset_right - sin_offset_left) * M_PI;
+    if(t==1){
+        float x = sin_offset_left * M_PI + dis * dt;
+        float y = amplitude * sin(x);
+        return glm::vec3(x, y, 0);
+    }
+    else{
+        float angle = 2.0f * M_PI * dt * ( dis / (2.0f * M_PI));
+        float x = circle_x_center + amplitude * cos(angle);
+        float y = amplitude * sin(angle);
+        return glm::vec3(x, y, 0);
+    }
+}
+
+void animation1(Graph* graph){
+
+    //Initialize the lines
+    Line *x_axis = new Line(glm::vec3(-50, 0, 0), glm::vec3(50, 0, 0));
+    Line *y_axis = new Line(glm::vec3(0, 30, 0), glm::vec3(0, -30, 0));
+    Line *z_axis = new Line(glm::vec3(0, 0, -50), glm::vec3(0, 0, 50));
+
+    //set stroke for the lines
+    x_axis->setStrokeWidth(0.5f);
+    y_axis->setStrokeWidth(0.5f);
+    z_axis->setStrokeWidth(0.5f);
+
+    //draw the circle
+    Circle *circle = new Circle(amplitude, circle_x_center, 0);
+    circle->setStrokeWidth(0.5f);
+
+    Line *radius = new Line(glm::vec3(-45, 0, 0), glm::vec3(-40, 0, 0));
+    radius->setStrokeWidth(0.5f);
+
+    float start_time = 0.0f;
+
+    radius->setUpdater(lineUpdater, start_time, duration);
+
+    Line *tracking_line = new Line(glm::vec3(-40, 0, 0), glm::vec3(-12.0f * M_PI, 0, 0));
+    tracking_line->setStrokeWidth(0.5f);
+    tracking_line->setUpdater(trackingLineUpdater, start_time, duration);
+
+    Var v;
+
+    TestObject *sin_graph = new TestObject();
+    sin_graph->range = {sin_offset_left * M_PI, sin_offset_right * M_PI};
+    sin_graph->generatePoints(sinGraph, v);
+    sin_graph->setStrokeWidth(0.5f);
+
+    Animation *sin_graph_anim = new ShowCreation(sin_graph, start_time, duration);
+    sin_graph_anim->anim_timing_func = AnimationTimmingFunction::linearProgress;
+
+    
+    //add the lines to the scene
+    graph->play(x_axis);
+    graph->play(y_axis);
+    graph->play(z_axis);
+
+    graph->play(circle);
+    graph->play(sin_graph);
+    graph->play(radius);
+    graph->play(tracking_line);
+}
+
+void animation2(Graph* graph){
+    // Initialize the lines
+    Line *x_axis = new Line(glm::vec3(-50, 0, 0), glm::vec3(50, 0, 0));
+    Line *y_axis = new Line(glm::vec3(0, 30, 0), glm::vec3(0, -30, 0));
+    Line *z_axis = new Line(glm::vec3(0, 0, -50), glm::vec3(0, 0, 50));
+
+    // set stroke for the lines
+    x_axis->setStrokeWidth(0.5f);
+    y_axis->setStrokeWidth(0.5f);
+    z_axis->setStrokeWidth(0.5f);
+
+    Var v;
+
+    TestObject *sin_graph = new TestObject();
+    sin_graph->generatePoints(sinGraph, v);
+    sin_graph->setStrokeWidth(0.5f);
+    sin_graph->setColor({GraphColor(), GraphColor(), GraphColor(), GraphColor(), GraphColor()});
+    sin_graph->setUpdater(PetalSpiral, 0, -1);
+
+    graph->play(sin_graph);
+
+    // add the lines to the scene
+    graph->play(x_axis);
+    graph->play(y_axis);
+    graph->play(z_axis);
+}
+
+void animation3(Graph* graph){
+    // Initialize the lines
+    Line *x_axis = new Line(glm::vec3(-50, 0, 0), glm::vec3(50, 0, 0));
+    Line *y_axis = new Line(glm::vec3(0, 30, 0), glm::vec3(0, -30, 0));
+    Line *z_axis = new Line(glm::vec3(0, 0, -50), glm::vec3(0, 0, 50));
+
+    // set stroke for the lines
+    x_axis->setStrokeWidth(0.5f);
+    y_axis->setStrokeWidth(0.5f);
+    z_axis->setStrokeWidth(0.5f);
+
+    Var v;
+    v.addVar(8.0f);
+    v.addVar(8.0f);
+    v.addVar(8.0f);
+
+    TestObject *sin_graph = new TestObject();
+    sin_graph->range = {sin_offset_left * M_PI, sin_offset_right * M_PI};
+    sin_graph->generatePoints(sinGraph, v);
+    sin_graph->setStrokeWidth(0.5f);
+
+    TestObject *sin_graph2 = new TestObject();
+    sin_graph2->range = {-2.0f * M_PI, 2.0f * M_PI};
+    sin_graph2->generatePoints(chaoticFractal, v);
+
+    TestObject *buttfly_curve = new TestObject();
+    buttfly_curve->range = {sin_offset_left * M_PI, sin_offset_right * M_PI};
+    buttfly_curve->resolution = 3000;
+    buttfly_curve->generatePoints(butterflyCurve, v);
+
+    new ShowCreation(sin_graph, 0, 5.0f);
+    new Transition(sin_graph, buttfly_curve, 5.0f, 5.0f);
+    new Transition(sin_graph, sin_graph2, 10.0f, 5.0f);
+
+    graph->play(sin_graph);
+
+    // add the lines to the scene
+    graph->play(x_axis);
+    graph->play(y_axis);
+    graph->play(z_axis);
+}
+
+glm::vec3 random(float t, Var v){
+    float x = 50.0f * t;
+    float y = sin(x) + cos(x);
+    float z = cos(y);
+    return {x, y, z};
+}
+
+// int main(){
+    // Graph *graph = Graph::getInstance();
+
+    // animation1(graph);
+    // animation2(graph);
+    // animation3(graph);
+
+    // TestObject *test = new TestObject();
+    // Var v;
+    // test->resolution = 2000;
+    // test->setStrokeWidth(0.5f);
+    // test->generatePoints(random, v);
+    // graph->play(test);
+
+    // ThreeDObject *td = new ThreeDObject();
+    // td->r_range = {0, 2 * M_PI};
+    // td->t_range = {0, 2 * M_PI};
+    // td->resolution = {50, 50};
+    // td->graph_func = torus;
+    // Var var;
+    // var.addVar(20.0f);
+    // var.addVar(10.0f);
+    // td->graph_var = var;
+    // td->setFillColors({GraphColor(0.5, 0, 0.5), GraphColor(0.5, 0.5, 0), GraphColor(0.5, 0, 0.5)});
+    // td->setShowFill(false);
+    // td->setFillOpacity(0.0f);
+    // td->setStrokeWidth(5.0f);
+    // Animation* anim1 = new ShowFillCreation(td, 0, 10);
+    // anim1->anim_timing_func = AnimationTimmingFunction::linearProgress;
+
+    // graph->play(td);
+
+    // graph->run();
+// }
+
+int main(){
+    Graph *graph = Graph::getInstance(0);
+
+    // Line *x_axis = new Line(glm::vec3(-50, 0, 0), glm::vec3(50, 0, 0));
+    // Line *y_axis = new Line(glm::vec3(0, 30, 0), glm::vec3(0, -30, 0));
+    // Line *z_axis = new Line(glm::vec3(0, 0, -50), glm::vec3(0, 0, 50));
+
+    // // set stroke for the lines
+    // x_axis->setStrokeWidth(0.5f);
+    // y_axis->setStrokeWidth(0.5f);
+    // z_axis->setStrokeWidth(0.5f);
+
+    Dot *dot0 = new Dot(0, 0, 20, 32);
+    Dot *dot1 = new Dot(0, 0, 15, 5);
+    Dot *dot2 = new Dot(0, 0, 5, 5);
+
+    dot0->setStrokeWidth(0.5f);
+    dot1->setStrokeWidth(0.5f);
+    dot2->setStrokeWidth(0.5f);
+
+    // graph->play(dot0);
+    graph->play(dot1);
+    new Transition(dot1, dot0, 0.0f, 5.0f);
+    new Transition(dot1, dot2, 5.0f, 5.0f);
+    new Scale(dot1, glm::vec3(2, 2, 0), 10, 2);
+    Animation* anim = new ShowCreation(dot1, 12, 5);
+    anim->anim_timing_func = AnimationTimmingFunction::linearProgress;
+
+    // graph->play(x_axis);
+    // graph->play(y_axis);
+    // graph->play(z_axis);
+
+    graph->run();
+}
+
+int main2()
 {
     Graph *graph = Graph::getInstance(0);
 
     // ThreeDAxes *td = new ThreeDAxes();
     // graph->play(td);
 
-    Dot *dot0 = new Dot(0, 0, 10, 32);
-    Dot *dot1 = new Dot(-10, -10, 5, 32);
+    Dot *dot0 = new Dot(0, 0, 15, 32);
+    Dot *dot1 = new Dot(0, 0, 5, 32);
     Dot *dot2 = new Dot(0, 0, 30, 5);
     Dot *dot3 = new Dot(0, 0, 15, 5);
     Dot *dot4 = new Dot(0, 0, 20, 6);
     Dot *dot5 = new Dot(0, 0, 25, 13);
     dot0->setStrokeWidth(0.5f);
-    dot1->setStrokeWidth(3.0f);
+    dot1->setStrokeWidth(0.5f);
     dot2->setStrokeWidth(0.5f);
     dot3->setStrokeWidth(3.0f);
     dot4->setStrokeWidth(4.0f);
     dot5->setStrokeWidth(5.0f);
     graph->play(dot0);
+    graph->play(dot1);
+    graph->play(dot2);
 
     std::cout << dot0->x << ", " << dot0->y << ", " << dot0->width << ", " << dot0->height << std::endl;
-    // graph->play(new ShowCreation(dot0, 18, 5));
-    // graph->play(new ShowCreation(dot1, 3, 5));
-    // graph->play(new ShowCreation(dot2, 6, 5));
+    // graph->play(new ShowCreation(dot0, 0, 5));
+    // graph->play(new ShowCreation(dot1, 0, 5));
+    // graph->play(new ShowCreation(dot2, 0, 5));
     // graph->play(new ShowCreation(dot3, 9, 5));
     // graph->play(new ShowCreation(dot4, 12, 5));
     // graph->play(new ShowCreation(dot5, 15, 5));
-    // graph->play(dot1);
-    // graph->play(dot2);
-    // dot1->nextTo(dot0, Position::LEFT);
+    // dot1->nextTo(dot2, Position::LEFT);
     // dot1->setMoveTo(glm::vec3(0, 0, 0));
     // graph->play(dot3);
     // graph->play(dot4);
     // graph->play(dot5);
     dot0->fillOpacity = 0;
     dot1->fillOpacity = 0;
-    dot2->fillOpacity = 0;
+    // dot0->moveTo(Position::RIGHT);
+    // dot2->fillOpacity = 0;
     dot3->fillOpacity = 0;
     dot4->fillOpacity = 0;
     dot5->fillOpacity = 0;
+
+    int start_time = 0;
+    std::vector<Position> positions = {LEFT, TOP, RIGHT, BOTTOM, TOP_LEFT, BOTTOM_LEFT, TOP_RIGHT, BOTTOM_RIGHT};
+
+    for (int i = 0; i < positions.size(); ++i){
+        (new Translate(dot1, dot0->getPosition(positions[i]), start_time + i * 3, 3, Position::TOP_LEFT))->anim_timing_func = AnimationTimmingFunction::linearProgress;
+        std::cout << "Start time is: " << start_time + i * 3 << std::endl;
+    }
+
+    glm::vec3 pos = dot0->getPosition(Position::NONE);
+    glm::vec3 pos1 = dot0->getPosition(Position::BOTTOM_RIGHT);
+
+    std::cout << "x is: " << pos[0] << " y is: " << pos[1] << " z is: " << pos[2] << std::endl;
+    std::cout << "x is: " << pos1[0] << " y is: " << pos1[1] << " z is: " << pos1[2] << std::endl;
+
+    dot1->nextTo(dot0, Position::RIGHT, 5.0f);
+
     Var v;
-    v.addVar(10.0f);
-    v.addVar(10.0f);
+    v.addVar(8.0f);
+    v.addVar(8.0f);
+    v.addVar(8.0f);
 
     TestObject *test = new TestObject();
-    test->range = {0.0f, 2.0f * M_PI};
-    test->generatePoints(butterflyCurve, v);
+    // test->range = {0.0f, 6.0f * M_PI};
+    // test->resolution = 100;
+    // test->generatePoints(butterflyCurve, v);
     // test->setPoints(glm::vec3(-30, -30, 0));
     // test->setPoints(glm::vec3(-30, 30, 0));
     // test->setPoints(glm::vec3(-40, 10, 0));
@@ -250,35 +513,40 @@ int main()
     // test->setPoints(glm::vec3(50, 8, 0));
     // test->setPoints(glm::vec3(55, 20, 0));
     TestObject *test1 = new TestObject();
-    test1->resolution = 2000;
-    test1->generatePoints([](float t, Var v)
-                         { float x = 30.0f * t; float y = 5.0f + 5.0f * sin(5.0f * x);
+    test1->range = {0.0f, 6.0f * M_PI};
+    test1->resolution = 1000;
+    test->resolution = 2000;
+    test->generatePoints([](float t, Var v)
+                         { float x = 60.0f * t; float y = 5.0f * sin(x * 0.3f);
                         float z = 0;
                     return glm::vec3(x, y, z); }, v);
-    
+    // test->use_bezier_always = 0.0;
+
     // Use BEVEL join style for smooth curves to avoid artifacts
     // test1->setStrokeJoinStyle(GraphMathObject::StrokeJoinStyle::BEVEL);
     // test1->setMiterLimit(1.5f);  // Tight limit for smooth rendering
     // test->resolution = 500;
-    // test1->generatePoints(butterflyCurve, v);
+    test1->generatePoints(chaoticFractal, v);
+    // test1->use_bezier_always = 0.0;
     // test1->setUpdater(WavingTube, 0, -1);
     // test1->setUpdater(TwistingRibbon, 0, -1);
     // test1->setUpdater(RollingWave, 0, -1);
     // test1->setUpdater(Corkscrew, 0, -1);
     // test1->setUpdater(OceanRipple, 0, -1);
-    // test1->setUpdater(PetalSpiral, 0, 10);
+    // test->setUpdater(PetalSpiral, 0, -1);
 
     test1->fillOpacity = 0;
-    graph->play(test1);
+    test->setStrokeWidth(1.0f);
+    graph->play(test);
     test->fillOpacity = 0;
-    test1->setStrokeWidth(0.05f);
-    test->setStrokeWidth(0.5f);
-    // graph->play(test);
-    Animation *anim1 = new ShowCreation(test1, 0, 20);
+    test1->setStrokeWidth(0.5f);
+    // graph->play(test1);
+    Animation *anim1 = new ShowCreation(test, 0, 10);
+    // Animation *transitionAnim1 = new Transition(test1, test, 2, 5);
     // Animation *anim2 = new ShowCreation(test1, 0, 5);
     anim1->anim_timing_func = AnimationTimmingFunction::linearProgress;
     // anim2->anim_timing_func = AnimationTimmingFunction::easeInOutExpo;
-
+    // transitionAnim1->anim_timing_func = AnimationTimmingFunction::easeInOutExpo;
     float L = 30.0f;
     Line *x_pos_to_neg = new Line(glm::vec3(L, 0, 0), glm::vec3(-L, 0, 0));
     Line *x_neg_to_pos = new Line(glm::vec3(-L, 5, 0), glm::vec3(L, 5, 0));
@@ -302,23 +570,24 @@ int main()
     x_pos_to_neg->setColor(color1);
     y_pos_to_neg->setColor(color2);
 
-    int offset = 10;
-    // for (int i = 0; i < 2; ++i)
-    // {
-    //     Line *line = new Line(glm::vec3(-offset + i * offset * 2, offset * 3, 0), glm::vec3(-offset + i * offset * 2, -offset * 3, 0));
-    //     line->setColor({color1, color2});
-    //     graph->play(line);
-    //     line->showGraph = false;
-    //     line->setStrokeWidth(0.5f);
-    //     graph->play(new ShowCreation(line, 0, 5));
+    int offset = 15;
+    for (int i = 0; i < 2; ++i)
+    {
+        Line *line = new Line(glm::vec3(-offset + i * offset * 2, offset * 3, 0), glm::vec3(-offset + i * offset * 2, -offset * 3, 0));
+        line->setColor({color1, color2});
+        graph->play(line);
+        line->showGraph = false;
+        line->setStrokeWidth(0.5f);
+        graph->play(new ShowCreation(line, 0, 5));
 
-    //     Line *liney = new Line(glm::vec3(-offset * 3, -offset + i * offset * 2, 0), glm::vec3(offset * 3, -offset + i * offset * 2, 0));
-    //     liney->setColor({color1, color2});
-    //     graph->play(liney);
-    //     liney->showGraph = false;
-    //     liney->setStrokeWidth(0.5f);
-    //     graph->play(new ShowCreation(liney, 0, 5));
-    // }
+        Line *liney = new Line(glm::vec3(-offset * 3, -offset + i * offset * 2, 0), glm::vec3(offset * 3, -offset + i * offset * 2, 0));
+        liney->setColor({color1, color2});
+        graph->play(liney);
+        liney->showGraph = false;
+        liney->setStrokeWidth(0.5f);
+        graph->play(new ShowCreation(liney, 0, 5));
+    }
+
 
 
     graph->run();

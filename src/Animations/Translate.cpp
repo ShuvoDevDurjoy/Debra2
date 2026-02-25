@@ -125,6 +125,7 @@ void Translate::play(float dt)
     // targetObject->moveTo(pos);
     // targetObject->translate = pos;
     targetObject->setTranslate(pos);
+
 }
 
 // Scale Animation constructor

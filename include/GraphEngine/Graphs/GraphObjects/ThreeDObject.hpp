@@ -6,6 +6,7 @@
 
 #include "../../Math/Var.hpp"
 
+
 class ThreeDObject: public GraphMathObject{
     private:
         std::string vertexShaderPath = "./shaders/quadratic_shaders/vertex.vs";
@@ -31,36 +32,40 @@ class ThreeDObject: public GraphMathObject{
         std::vector<glm::vec3> fill_color_array;
 
         std::vector<ThreeDObject *> sub_graphs;
-public:
-    glm::vec3 (*graph_func)(float, float, Var) = nullptr;
-    Var graph_var;
-    std::pair<float, float> r_range = {0, 1};
-    std::pair<float, float> t_range = {0, 2.0f * M_PI};
-    std::pair<float, float> resolution = {32, 32};
 
-public:
-    ThreeDObject() {}
-    ~ThreeDObject() {}
+        bool showFill = true;
 
-    void Init(float dt = 0) override;
+    public:
+        glm::vec3 (*graph_func)(float, float, Var) = nullptr;
+        Var graph_var;
+        std::pair<float, float> r_range = {0, 1};
+        std::pair<float, float> t_range = {0, 2.0f * M_PI};
+        std::pair<float, float> resolution = {32, 32};
 
-    void InitStrokeData() override;
-    void InitFillData() override;
+    public:
+        ThreeDObject() {}
+        ~ThreeDObject() {}
 
-    void setStrokeData() override;
-    void setFillData() override;
+        void Init(float dt = 0) override;
 
-    void initializeStrokeShader() override;
-    void initializeFillShader() override;
+        void InitStrokeData() override;
+        void InitFillData() override;
 
-    void uploadStrokeDataToShader() override;
-    void uploadFillDataToShader() override;
+        void setStrokeData() override;
+        void setFillData() override;
 
-    void interpolate(int) override;
+        void initializeStrokeShader() override;
+        void initializeFillShader() override;
 
-    void draw(float dt) {
-        update(dt);
-    };
+        void uploadStrokeDataToShader() override;
+        void uploadFillDataToShader() override;
+
+        void interpolate(int) override;
+
+        void draw(float dt)
+        {
+            update(dt);
+        };
 
     void setPoints(std::vector<glm::vec3> points);
 
@@ -69,7 +74,7 @@ public:
 
     void addPoints(glm::vec3 point);
 
-    void generatePoints();
+    virtual void generatePoints();
 
     int getSize();
 
@@ -89,6 +94,10 @@ public:
     void updateFillPoints() override;
 
     void updatePoints();
+
+    void setShowFill(bool show_fill){
+        showFill = show_fill;
+    }
 };
 
 #endif

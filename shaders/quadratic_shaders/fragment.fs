@@ -123,7 +123,7 @@ void runMain(){
     
     // Anti-aliasing width (in texture space)
     // Scale AA based on curve type for consistent appearance
-    float aa_width = fwidth(d) * 1.2;
+    float aa_width = fwidth(d);
     
     // Smooth step from inner edge to outer edge
     // This gives proper anti-aliased strokes even at sharp corners

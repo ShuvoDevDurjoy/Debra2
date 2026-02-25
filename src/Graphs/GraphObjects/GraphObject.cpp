@@ -52,7 +52,7 @@ void GraphObject::updateStroke(float dt)
         stroke_shader->setFloat("uv_anti_alias_width_pass", 1.0f);
         stroke_shader->setFloat("user_bezier_always", use_bezier_always ? 1.0f : 0.0f);
         stroke_shader->setInt("u_layer", layer);
-        
+
         // Pass industry-standard stroke properties to shader
         stroke_shader->setFloat("uMiterLimit", miter_limit);
         stroke_shader->setInt("uStrokeJoinStyle", static_cast<int>(stroke_join_style));
@@ -98,7 +98,7 @@ void GraphObject::Init(float s_time)
 
     layer = s_time;
 
-    std::cout << "Layer is: " << layer << std::endl;
+    // std::cout << "Layer is: " << layer << std::endl;
     // shader to draw the stroke of the graph
     this->stroke_shader = new Shader(vertexShaderPath, geometricShaderPath, fragmentShaderPath);
     // shader for filling the graph's underneath area
@@ -346,7 +346,7 @@ void GraphObject::applyColorToVertex()
     int n = getSize();
     stroke_color_array.resize(n);
 
-    std::cout << "Graph Color size is: " << colors.size() << std::endl;
+    // std::cout << "Graph Color size is: " << colors.size() << std::endl;
 
     if (colors.empty())
     {
@@ -399,6 +399,7 @@ void GraphObject::applyUpdaterFunction(float dt)
 void GraphObject::generatePoints(glm::vec3 (*func)(float, Var), Var v)
 {
     this->func = func;
+    this->func_var = v;
     float p = abs(range.second - range.first) / resolution;
     float t = range.first;
     float minx = INT_MAX, maxX = INT_MIN, minY = INT_MAX, maxY = INT_MIN;
@@ -579,8 +580,7 @@ void GraphObject::updatePoints()
     uploadFillDataToShader();
 }
 
-void GraphObject::interpolate(int number)
-{
+void GraphObject::linearInterpolate(int number){
     if (!is_initialized)
     {
         Init();
@@ -617,16 +617,47 @@ void GraphObject::interpolate(int number)
     points.clear();
     points = dupPoints;
     resolution = interpolateNumber;
+}
 
-    std::cout << "point size is: " << points.size() << std::endl;
+void GraphObject::functionalInterpolate(int number){
+    if (!is_initialized)
+    {
+        Init();
+    }
+    resolution = getSize() - 1;
+    int interpolateNumber = std::max(resolution, number);
+    
+    points.clear();
+    float t = range.first;
+    float p = abs(range.second - range.first) / interpolateNumber;
+    float minx = INT_MAX, maxX = INT_MIN, minY = INT_MAX, maxY = INT_MIN;
 
-    std::cout << "Fill size is: " << getFillSize() << std::endl;
+    for (int i = 0; i <= interpolateNumber; ++i){
+        glm::vec3 point = func(t, func_var);
+        t += p;
+        minx = std::min(minx, (point[0]));
+        maxX = std::max(maxX, (point[0]));
+        minY = std::min(minY, (point[1]));
+        maxY = std::max(maxY, (point[1]));
+        points.push_back(point);
+    }
+    resolution = interpolateNumber;
+    setDimension(minx, maxX, minY, maxY);
+}
+
+void GraphObject::interpolate(int number)
+{
+    if(func){
+        functionalInterpolate(number);
+    }
+    else{
+        linearInterpolate(number);
+    }
+
     glGenVertexArrays(1, &FillVAO);
     glGenBuffers(1, &FillVBO);
     InitStrokeData();
     InitFillData();
-
-    std::cout << "Fill size is: " << getFillSize() << std::endl;
 }
 
 glm::vec3 GraphObject::getPosition(Position pos)
@@ -635,39 +666,88 @@ glm::vec3 GraphObject::getPosition(Position pos)
     switch (pos)
     {
     case LEFT:
-        position = glm::vec3(width / 2.0f, height / 4.0f, 0);
+        position = glm::vec3(x, y - height / 2.0f, 0);
         break;
     case RIGHT:
-        position = glm::vec3(x - width, height / 2.0f, 0);
+        position = glm::vec3(x + width, y - height / 2.0f, 0);
         break;
     case TOP_LEFT:
-        position = glm::vec3(0, 0, 0);
+        position = glm::vec3(x, y, 0);
         break;
     case BOTTOM_LEFT:
-        position = glm::vec3(0, height, 0);
+        position = glm::vec3(x, y - height, 0);
         break;
     case TOP_RIGHT:
-        position = glm::vec3(-width, 0, 0);
+        position = glm::vec3(x + width, y, 0);
         break;
     case BOTTOM_RIGHT:
-        position = glm::vec3(-width, height, 0);
+        position = glm::vec3(x + width, y - height, 0);
         break;
     case TOP:
-        position = glm::vec3(-width / 2.0f, 0, 0);
+        position = glm::vec3(x + width / 2.0f, y, 0);
         break;
     case BOTTOM:
-        position = glm::vec3(-width / 2.0f, height, 0);
+        position = glm::vec3(x + width / 2.0f, y - height, 0);
+        break;
+    case CENTER:
+        position = glm::vec3(x + width / 2.0f, y - height / 2.0f, 0);
         break;
     case NONE:
-        position = glm::vec3(-width / 2.0f, height / 2.0f, 0);
+        position = glm::vec3(x, y, 0);
+        break;
     }
 
     return position;
 }
 
-void GraphObject::nextTo(GraphObject* target, Position pos){
+glm::vec3 GraphObject::getRelativePosition(glm::vec3 targetPosition, Position pos, glm::vec3 buffer)
+{
+    std::cout << "Position: " << std::endl;
+    std::cout << targetPosition.x << ", " << targetPosition.y << ", " << targetPosition.z << std::endl;
+    glm::vec3 objects_position = getPosition(pos);
+    std::cout << objects_position.x << ", " << objects_position.y << ", " << objects_position.z << std::endl;
+    glm::vec3 temp_pos = objects_position - getPosition(Position::NONE);
+    std::cout << temp_pos.x << ", " << temp_pos.y << ", " << temp_pos.z << std::endl;
+    temp_pos = targetPosition - temp_pos;
+    std::cout << temp_pos.x << ", " << temp_pos.y << ", " << temp_pos.z << std::endl;
+
+    return temp_pos - getPosition(Position::NONE) + buffer;
+}
+
+void GraphObject::nextTo(GraphObject *target, Position pos, float buffer)
+{
     glm::vec3 position = target->getPosition(pos);
-    moveTo(position);
+
+    switch(pos){
+        case LEFT:
+            position = getRelativePosition(position, Position::RIGHT, glm::vec3(-buffer, 0, 0));
+            break;
+        case RIGHT:
+            position = getRelativePosition(position, Position::LEFT, glm::vec3(buffer, 0, 0));
+            break;
+        case TOP:
+            position = getRelativePosition(position, Position::BOTTOM, glm::vec3(0, buffer, 0));
+            break;
+        case BOTTOM:
+            position = getRelativePosition(position, Position::TOP, glm::vec3(0, -buffer, 0));
+            break;
+        case TOP_LEFT:
+            position = getRelativePosition(position, Position::BOTTOM_RIGHT, glm::vec3(-buffer, buffer, 0));
+            break;
+        case TOP_RIGHT:
+            position = getRelativePosition(position, Position::BOTTOM_LEFT, glm::vec3(buffer, buffer, 0));
+            break;
+        case BOTTOM_LEFT:
+            position = getRelativePosition(position, Position::TOP_RIGHT, glm::vec3(-buffer, -buffer, 0));
+            break;
+        case BOTTOM_RIGHT:
+            position = getRelativePosition(position, Position::TOP_LEFT, glm::vec3(buffer, -buffer, 0));
+            break;
+        case CENTER:
+            position = getRelativePosition(position, Position::CENTER, glm::vec3(0, 0, 0));
+        }
+
+    translate = position;
     // setTranslate(position);
-    // updatePoints();
+    updatePoints();
 }

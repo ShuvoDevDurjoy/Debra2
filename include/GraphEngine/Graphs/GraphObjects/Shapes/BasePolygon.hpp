@@ -24,7 +24,7 @@ public:
 
         float angleStep = glm::two_pi<float>() / sides;
         float minx = INT_MAX, maxX = INT_MIN, minY = INT_MAX, maxY = INT_MIN;
-        for (int i = 0; i <= sides; i++)
+        for (int i = 1; i <= sides + 1; i++)
         {
             float angle = i * angleStep;
             // Position

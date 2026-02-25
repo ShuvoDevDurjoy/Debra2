@@ -9,7 +9,7 @@ Animation::Animation(GraphMathObject *object, float start_time, float duration)
     drawStart = 0;
     drawSize = targetObject->getPointsSize();
     progress = 1.0f;
-    std::cout << "Start time is: " << start_time << std::endl;
+    // std::cout << "Start time is: " << start_time << std::endl;
     AnimationManager::addToManager(this);
 }
 Animation::Animation(GraphMathObject *object, GraphMathObject* morphObject, float start_time, float duration)

@@ -6,6 +6,7 @@ void ThreeDObject::Init(float dt)
     this->stroke_shader = new Shader("./shaders/vertex_shader.vs", "./shaders/geometry.gs", "./shaders/fragment_shader.fs");
     // this->stroke_shader= new Shader(fillVertexShaderPath, fillGeometricShaderPath, fillFragmentShaderPath);
     this->fill_shader = new Shader(fillVertexShaderPath, fillGeometricShaderPath, fillFragmentShaderPath);
+    if(fill_colors.size()==0)
     fill_colors = {GraphColor(1, 0, 1), GraphColor(1, 1, 0), GraphColor(0, 1, 1), GraphColor(1, 1, 0), GraphColor(1, 0, 1)};
     fillProgress = 1;
     if (!getSize())
@@ -391,7 +392,8 @@ void ThreeDObject::updateFill(float dt){
         glDisable(GL_DEPTH_TEST);
 }
 void ThreeDObject::update(float dt){
-    updateFill(dt);
+    if(showFill)
+        updateFill(dt);
     updateStroke(dt);
 }
 

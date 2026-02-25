@@ -5,7 +5,7 @@ MouseEventListener *GraphApp::mouseEventMangager;
 glm::mat4 GraphApp::view, GraphApp::projection;
 glm::vec3 GraphApp::cameraPos;
 glm::vec3 GraphApp::camera_center = glm::vec3(0, 0, 0);
-float GraphApp::lastX = 0, GraphApp::lastY = 0, GraphApp::rotX = 0, GraphApp::rotY = 0;
+float GraphApp::lastX = 0, GraphApp::lastY = 0, GraphApp::rotX = 10, GraphApp::rotY = 30;
 int GraphApp::drawCount = 0;
 
 GraphApp::GraphApp()
@@ -44,9 +44,9 @@ int GraphApp::InitWindow()
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     // create window
-    window = glfwCreateWindow(window_width, window_height, "Shuvo Dev Durjoy", nullptr, nullptr);
+    window = glfwCreateWindow(window_width, window_height, "Debra", nullptr, nullptr);
 
-    cameraPos = glm::vec3(0.0f, 0.0f, 120.0f);
+    cameraPos = glm::vec3(0.0f, 0.0f, 80.0f);
     view = glm::lookAt(
         glm::vec3(cameraPos[0], cameraPos[1], cameraPos[2]),
         glm::vec3(0.0f, 0.0f, 0.0f),

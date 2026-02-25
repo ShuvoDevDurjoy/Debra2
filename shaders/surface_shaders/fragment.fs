@@ -108,5 +108,5 @@ void main()
     vec3 result = lighting * obj_color;
 
     // Gamma correction
-    FragColor = vec4(pow(result, vec3(1.0/2.2)), alpha);
+    FragColor = vec4(pow(result, vec3(1.0/2.1)), alpha);
 }

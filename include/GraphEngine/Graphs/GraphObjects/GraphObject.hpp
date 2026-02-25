@@ -142,6 +142,11 @@ public:
 
     void interpolate(int) override;
 
+    void linearInterpolate(int);
+    void functionalInterpolate(int);
+
+    void interpolateColor(int);
+
     void generatePoints(glm::vec3 (*func)(float, Var), Var v);
     void UpdateGraphWithFunction(float);
     void setUpdater(glm::vec3 (*updater_function)(float, float), float s_t, float d)
@@ -183,7 +188,8 @@ public:
 
     //positioning function related to this class not the parent class
     glm::vec3 getPosition(Position pos = Position::NONE);
-    void nextTo(GraphObject *target, Position pos = Position::NONE);
+    glm::vec3 getRelativePosition(glm::vec3 targetPosition, Position pos, glm::vec3 buffer = glm::vec3(0, 0, 0));
+    void nextTo(GraphObject *target, Position pos = Position::NONE, float buffer = 0.0f);
 };
 
 #endif
