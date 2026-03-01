@@ -23,10 +23,14 @@ public:
     ThreeDAxes();
     void generate(Vec3 start, Vec3 end);
 
+    void setStrokeData() override {}
+    void setFillData() override {}
+
     void generatePoints() override;
     void add(glm::vec3 p)
     {
-        points.push_back(p);
+        fill_points.push_back(p);
+        fill_color_array.push_back(glm::vec3(0.5f, 0.5f, 0.5f)); // Default gray axes
     }
 };
 

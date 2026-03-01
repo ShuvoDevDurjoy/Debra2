@@ -96,34 +96,27 @@ void main()
     float selfBias = float(vId[0]) * 1e-6;
     float z_bias = float(u_layer + vId[0]) * 1e-6;
 
-    mat4 pvm = projection * view * model;
+    mat4 vm = view * model;
 
-    vec3 P0 = gs_in[0].cp;
-    vec3 P1 = gs_in[1].cp;
-    vec3 PP = gs_in[0].pP;
-    vec3 NP = gs_in[1].nP;
+    // Transform all defining points into View Space
+    vec3 P0 = (vm * vec4(gs_in[0].cp, 1.0)).xyz;
+    vec3 P1 = (vm * vec4(gs_in[1].cp, 1.0)).xyz;
+    vec3 PP = (vm * vec4(gs_in[0].pP, 1.0)).xyz;
+    vec3 NP = (vm * vec4(gs_in[1].nP, 1.0)).xyz;
 
     bool isStart = length(P0 - PP) < 1e-5;
     bool isEnd   = length(P1 - NP) < 1e-5;
 
-    // --- segment directions ---
+    // --- segment directions in View Space ---
     vec3 d1 = norm3(P1 - P0);
     vec3 d0 = isStart ? d1 : norm3(P0 - PP);
     vec3 d2 = isEnd   ? d1 : norm3(NP - P1);
 
-    // --- stable perpendicular ---
-    vec3 planeN = norm3(cross(d1, d0));
-
-    // Handle degenerate cases with better fallback
-    if(length(planeN) < 1e-3){
-        vec3 ref = pickOrthogonal(d1);
-        planeN = norm3(cross(d1, ref));
-        
-        // If still degenerate, use safe default
-        if(length(planeN) < 1e-3) {
-            planeN = vec3(0, 0, 1);
-        }
-    }
+    // --- stable perpendicular (Always Screen-Facing!) ---
+    // In view space, the camera is at (0,0,0) looking down -Z.
+    // By forcing the normal to be (0,0,1), we extrude purely in Screen Space (XY).
+    // This entirely removes twisting, 3D ribbon fracturing, and overlapping Z-fighting.
+    vec3 planeN = vec3(0.0, 0.0, 1.0);
 
     vec3 perp0 = norm3(cross(planeN, d0));
     vec3 perp1 = norm3(cross(planeN, d1));
@@ -306,11 +299,11 @@ void main()
     vec3 N = perp1;
     vec3 origin = P0;
 
-    // --- Emit vertices ---
+    // Since p0..p3 are already in View Space, we only multiply by the projection matrix!
     vec3 local = p0-origin;
     pCurrent = vec2(dot(local,T), dot(local,N));
     pProgress = 0.0; outColor = gs_in[0].color;
-    vec4 clip = pvm*vec4(p0, 1.0); 
+    vec4 clip = projection * vec4(p0, 1.0); 
     // clip.z -= z_bias * clip.w;
     gl_Position = clip;
     EmitVertex();
@@ -318,7 +311,7 @@ void main()
     local = p1-origin;
     pCurrent = vec2(dot(local,T), dot(local,N));
     pProgress = 0.0; outColor = gs_in[0].color;
-    clip = pvm*vec4(p1,1.0); 
+    clip = projection * vec4(p1, 1.0); 
     // clip.z -= z_bias * clip.w;
     gl_Position = clip;
     EmitVertex();
@@ -326,7 +319,7 @@ void main()
     local = p2-origin;
     pCurrent = vec2(dot(local,T), dot(local,N));
     pProgress = 1.0; outColor = gs_in[1].color;
-    clip = pvm*vec4(p2, 1.0);
+    clip = projection * vec4(p2, 1.0);
     // clip.z -= z_bias * clip.w;
     gl_Position = clip; 
     EmitVertex();
@@ -334,7 +327,7 @@ void main()
     local = p3-origin;
     pCurrent = vec2(dot(local,T), dot(local,N));
     pProgress = 1.0; outColor = gs_in[1].color;
-    clip = pvm*vec4(p3, 1.0); 
+    clip = projection * vec4(p3, 1.0); 
     // clip.z -= z_bias * clip.w;
     gl_Position = clip;
     EmitVertex();

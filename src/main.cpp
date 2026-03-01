@@ -336,21 +336,25 @@ void animation3(Graph* graph){
     sin_graph->range = {sin_offset_left * M_PI, sin_offset_right * M_PI};
     sin_graph->generatePoints(sinGraph, v);
     sin_graph->setStrokeWidth(0.5f);
-
+    
     TestObject *sin_graph2 = new TestObject();
     sin_graph2->range = {-2.0f * M_PI, 2.0f * M_PI};
     sin_graph2->generatePoints(chaoticFractal, v);
-
+    sin_graph2->setStrokeWidth(0.5f);
+    
     TestObject *buttfly_curve = new TestObject();
     buttfly_curve->range = {sin_offset_left * M_PI, sin_offset_right * M_PI};
     buttfly_curve->resolution = 3000;
     buttfly_curve->generatePoints(butterflyCurve, v);
+    buttfly_curve->setStrokeWidth(0.5f);
+    Circle* circ = new Circle(15, 0, 0);
+    Circle* circ2 = new Circle(10, 0, 0);
 
-    new ShowCreation(sin_graph, 0, 5.0f);
-    new Transition(sin_graph, buttfly_curve, 5.0f, 5.0f);
-    new Transition(sin_graph, sin_graph2, 10.0f, 5.0f);
+    graph->play(circ);
+    // new ShowCreation(sin_graph, 0, 5.0f);
+    graph->play(new Transition(circ, circ2, 0.0f, 5.0f));
+    // graph->play(new Transition(sin_graph, sin_graph2, 10.0f, 5.0f));
 
-    graph->play(sin_graph);
 
     // add the lines to the scene
     graph->play(x_axis);
@@ -403,6 +407,8 @@ glm::vec3 random(float t, Var v){
 int main(){
     Graph *graph = Graph::getInstance(0);
 
+    // animation3(graph);
+
     // Line *x_axis = new Line(glm::vec3(-50, 0, 0), glm::vec3(50, 0, 0));
     // Line *y_axis = new Line(glm::vec3(0, 30, 0), glm::vec3(0, -30, 0));
     // Line *z_axis = new Line(glm::vec3(0, 0, -50), glm::vec3(0, 0, 50));
@@ -412,21 +418,21 @@ int main(){
     // y_axis->setStrokeWidth(0.5f);
     // z_axis->setStrokeWidth(0.5f);
 
-    Dot *dot0 = new Dot(0, 0, 20, 32);
+    Circle *circ = new Circle(20, -10, 0);
     Dot *dot1 = new Dot(0, 0, 15, 5);
     Dot *dot2 = new Dot(0, 0, 5, 5);
 
-    dot0->setStrokeWidth(0.5f);
+    circ->setStrokeWidth(0.5f);
     dot1->setStrokeWidth(0.5f);
     dot2->setStrokeWidth(0.5f);
 
     // graph->play(dot0);
     graph->play(dot1);
-    new Transition(dot1, dot0, 0.0f, 5.0f);
-    new Transition(dot1, dot2, 5.0f, 5.0f);
-    new Scale(dot1, glm::vec3(2, 2, 0), 10, 2);
-    Animation* anim = new ShowCreation(dot1, 12, 5);
-    anim->anim_timing_func = AnimationTimmingFunction::linearProgress;
+    // graph->play(new Transition(dot1, dot0, 0.0f, 5.0f));
+    graph->play(new Transition(dot1, circ, 5.0f, 5.0f));
+    // new Scale(dot1, glm::vec3(2, 2, 0), 10, 2);
+    // Animation* anim = new ShowCreation(dot1, 0, 5);
+    // anim->anim_timing_func = AnimationTimmingFunction::linearProgress;
 
     // graph->play(x_axis);
     // graph->play(y_axis);

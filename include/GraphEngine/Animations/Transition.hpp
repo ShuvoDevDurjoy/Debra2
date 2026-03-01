@@ -10,6 +10,8 @@ class Transition: public Animation{
     public :
         bool is_initialized = false;
         std::vector<glm::vec3> originalPoints;
+        std::vector<glm::vec3> originalBezierPoints; // Store initial bezier curves state
+        std::vector<glm::vec3> targetBezierPointsMatched;
         std::vector<glm::vec3> fillOriginalPoints;
 
     public:

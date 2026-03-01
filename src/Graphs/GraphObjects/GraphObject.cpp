@@ -13,6 +13,13 @@ void GraphObject::update(float dt)
             UpdateGraphWithFunction((dt - updateStartTime[0]) / (updateEndTime[0] - updateStartTime[0]));
         }
     }
+
+    if (stroke_dirty) {
+        setStrokeData();
+        uploadStrokeDataToShader();
+        stroke_dirty = false;
+    }
+
     // updateFill(dt);
     updateStroke(dt);
 }
@@ -187,6 +194,11 @@ inline void showPoints(std::vector<glm::vec3> pts)
 
 void GraphObject::setStrokeData()
 {
+    // Generate fine points from bezier controls before generating stroke arrays
+    if (is_bezier_path) {
+        build_points_from_bezier();
+    }
+
     stroke_current_points.clear();
     stroke_prev_points.clear();
     stroke_next_points.clear();
@@ -314,6 +326,11 @@ inline std::vector<Polygonn> buildFillPolygons(
 
 void GraphObject::setFillData()
 {
+    // Generate fine points from bezier curves to get a perfectly curved fill
+    if (is_bezier_path) {
+        build_points_from_bezier();
+    }
+
     using Point2D = std::pair<float, float>;
 
     std::vector<Point2D> curve;
@@ -403,18 +420,40 @@ void GraphObject::generatePoints(glm::vec3 (*func)(float, Var), Var v)
     float p = abs(range.second - range.first) / resolution;
     float t = range.first;
     float minx = INT_MAX, maxX = INT_MIN, minY = INT_MAX, maxY = INT_MIN;
+    
+    // Clear previous data
+    points.clear();
+    bezier_points.clear();
+    is_bezier_path = true;
+
     for (int i = 0; i <= resolution; ++i)
     {
         glm::vec3 point = func(t, v);
         t += p;
+        
         minx = std::min(minx, (point[0]));
         maxX = std::max(maxX, (point[0]));
         minY = std::min(minY, (point[1]));
         maxY = std::max(maxY, (point[1]));
+        
         points.push_back(point);
+        
+        // Populate Bezier path
+        if (i == 0) {
+            start_bezier_path(point);
+        } else {
+            add_line_to(point); // Represents linear segment as a cubic bezier
+        }
     }
 
     setDimension(minx, maxX, minY, maxY);
+    
+    // Optimization: If the sampled path is already dense, don't over-subdivide in Rendering
+    if (resolution > 100) {
+        bezier_subdivision_resolution = 1;
+    }
+    
+    build_points_from_bezier();
 }
 
 void GraphObject::UpdateGraphWithFunction(float dt)
@@ -454,10 +493,20 @@ void GraphObject::uploadStrokeDataToShader()
     glBindVertexArray(StrokeVAO);
     glBindBuffer(GL_ARRAY_BUFFER, StrokeVBO);
 
+    // Reallocate buffer to fit current size (Manim-style flexibility)
+    glBufferData(GL_ARRAY_BUFFER, 4 * buffer_size, NULL, GL_DYNAMIC_DRAW);
+
     glBufferSubData(GL_ARRAY_BUFFER, 0, buffer_size, stroke_current_points.data());
     glBufferSubData(GL_ARRAY_BUFFER, buffer_size, buffer_size, stroke_prev_points.data());
-    glBufferSubData(GL_ARRAY_BUFFER, 2 * buffer_size, buffer_size, stroke_next_points.data());
-    glBufferSubData(GL_ARRAY_BUFFER, 3 * buffer_size, buffer_size, stroke_color_array.data());
+    glBufferSubData(GL_ARRAY_BUFFER, 2 * buffer_size, buffer_size, stroke_current_points.data()); // Fallback for next_points if needed
+    
+    if (stroke_next_points.size() >= getSize()) {
+        glBufferSubData(GL_ARRAY_BUFFER, 2 * buffer_size, buffer_size, stroke_next_points.data());
+    }
+    
+    if (stroke_color_array.size() >= getSize()) {
+        glBufferSubData(GL_ARRAY_BUFFER, 3 * buffer_size, buffer_size, stroke_color_array.data());
+    }
 
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
     glEnableVertexAttribArray(0);
@@ -750,4 +799,32 @@ void GraphObject::nextTo(GraphObject *target, Position pos, float buffer)
     translate = position;
     // setTranslate(position);
     updatePoints();
+}
+
+std::vector<glm::vec3> GraphObject::getAllBezierPoints() {
+    std::vector<glm::vec3> all_pts = bezier_points;
+    for (GraphObject* child : subGraphObjects) {
+        std::vector<glm::vec3> child_pts = child->getAllBezierPoints();
+        all_pts.insert(all_pts.end(), child_pts.begin(), child_pts.end());
+    }
+    return all_pts;
+}
+
+void GraphObject::setAllBezierPoints(const std::vector<glm::vec3>& pts) {
+    if (subGraphObjects.empty()) {
+        bezier_points = pts;
+        is_bezier_path = !bezier_points.empty();
+        build_points_from_bezier();
+    } else {
+        size_t offset = 0;
+        for (GraphObject* child : subGraphObjects) {
+            std::vector<glm::vec3> child_current = child->getAllBezierPoints();
+            size_t child_count = child_current.size();
+            if (offset + child_count <= pts.size()) {
+                std::vector<glm::vec3> child_subset(pts.begin() + offset, pts.begin() + offset + child_count);
+                child->setAllBezierPoints(child_subset);
+                offset += child_count;
+            }
+        }
+    }
 }

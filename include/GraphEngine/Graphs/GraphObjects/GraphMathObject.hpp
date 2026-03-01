@@ -84,6 +84,12 @@ public:
 
 public:
     std::vector<glm::vec3> points;
+    
+    // Modern Manim-like Bezier path storage
+    bool is_bezier_path = false;
+    std::vector<glm::vec3> bezier_points; // Stores cubic bezier points: anchor, control1, control2, anchor ...
+    int bezier_subdivision_resolution = 64;
+    
     std::vector<GraphColor> stroke_colors;
     std::vector<GraphColor> fill_colors;
 
@@ -134,6 +140,7 @@ public:
     void setFillOpacity(float);
     void setStrokeOpacity(float);
     void setStrokeWidth(float);
+    void setSubdivisions(int res) { bezier_subdivision_resolution = res; bezier_dirty = true; }
     void moveTo(Position pos = Position::NONE);
     void moveTo(glm::vec3);
     void setMoveTo(glm::vec3);
@@ -143,6 +150,16 @@ public:
 public:
     void setRotation(glm::vec3 rot_amount, glm::vec3 rot_pivot);
     virtual void updatePoints() = 0;
+
+    // Bezier Path Methods
+    void start_bezier_path(glm::vec3 start_point);
+    void add_cubic_bezier_curve_to(glm::vec3 control1, glm::vec3 control2, glm::vec3 end_anchor);
+    void add_quadratic_bezier_curve_to(glm::vec3 control, glm::vec3 end_anchor);
+    void add_line_to(glm::vec3 end_anchor);
+    void build_points_from_bezier();
+    virtual void subdivide_bezier_curves();
+    virtual std::vector<glm::vec3> getAllBezierPoints();
+    virtual void setAllBezierPoints(const std::vector<glm::vec3>& pts);
 
 public:
     void setStrokeColors(std::vector<GraphColor> stroke_colors);
@@ -161,8 +178,12 @@ public:
 
     bool isEqual(glm::vec3 a, glm::vec3 b)
     {
-        return a[0] == b[0] && a[1] == b[1] && a[2] == b[2];
+        return glm::distance(a, b) < 0.0001f;
     }
+
+protected:
+    bool bezier_dirty = true;
+    bool stroke_dirty = true;
 };
 
 #endif

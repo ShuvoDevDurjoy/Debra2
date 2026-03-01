@@ -188,3 +188,106 @@ std::pair<glm::vec3, glm::vec3> GraphMathObject::getFillColorIndex(int index)
         return {GraphColor::colorToVec(fill_colors[color_idx]), GraphColor::colorToVec(fill_colors[color_idx])};
     }
 }
+
+// --- Bezier Path Methods ---
+
+void GraphMathObject::start_bezier_path(glm::vec3 start_point)
+{
+    is_bezier_path = true;
+    bezier_points.clear();
+    bezier_points.push_back(start_point);
+}
+
+void GraphMathObject::add_cubic_bezier_curve_to(glm::vec3 control1, glm::vec3 control2, glm::vec3 end_anchor)
+{
+    if (bezier_points.empty()) {
+        start_bezier_path(glm::vec3(0, 0, 0));
+    }
+    bezier_points.push_back(control1);
+    bezier_points.push_back(control2);
+    bezier_points.push_back(end_anchor);
+}
+
+void GraphMathObject::add_quadratic_bezier_curve_to(glm::vec3 control, glm::vec3 end_anchor)
+{
+    // Convert quadratic to cubic bezier for unified storage
+    if (bezier_points.empty()) {
+        start_bezier_path(glm::vec3(0, 0, 0));
+    }
+    glm::vec3 start_anchor = bezier_points.back();
+    
+    // Control1 = Start + 2/3 * (Control - Start)
+    glm::vec3 control1 = start_anchor + (2.0f / 3.0f) * (control - start_anchor);
+    // Control2 = End + 2/3 * (Control - End)
+    glm::vec3 control2 = end_anchor + (2.0f / 3.0f) * (control - end_anchor);
+    
+    add_cubic_bezier_curve_to(control1, control2, end_anchor);
+}
+
+void GraphMathObject::add_line_to(glm::vec3 end_anchor)
+{
+    if (bezier_points.empty()) {
+        start_bezier_path(glm::vec3(0, 0, 0));
+    }
+    glm::vec3 start_anchor = bezier_points.back();
+    
+    // For a straight line, controls are 1/3 and 2/3 along the line
+    glm::vec3 control1 = start_anchor + (1.0f / 3.0f) * (end_anchor - start_anchor);
+    glm::vec3 control2 = start_anchor + (2.0f / 3.0f) * (end_anchor - start_anchor);
+    
+    add_cubic_bezier_curve_to(control1, control2, end_anchor);
+}
+
+void GraphMathObject::subdivide_bezier_curves()
+{
+    if (!is_bezier_path || bezier_points.size() < 4) return;
+    
+    std::vector<glm::vec3> new_points;
+    new_points.push_back(bezier_points[0]);
+    
+    // Iterate through cubic curve segments
+    // Sequence is: start_anchor, c1, c2, end_anchor, c1, c2, end_anchor...
+    for (size_t i = 1; i + 2 < bezier_points.size(); i += 3) {
+        glm::vec3 p0 = bezier_points[i - 1];
+        glm::vec3 p1 = bezier_points[i];
+        glm::vec3 p2 = bezier_points[i + 1];
+        glm::vec3 p3 = bezier_points[i + 2];
+        
+        for (int step = 1; step <= bezier_subdivision_resolution; ++step) {
+            float t = static_cast<float>(step) / bezier_subdivision_resolution;
+            float omt = 1.0f - t;
+            
+            // Cubic Bezier Formula
+            glm::vec3 point = (omt * omt * omt) * p0 + 
+                              3.0f * (omt * omt) * t * p1 + 
+                              3.0f * omt * (t * t) * p2 + 
+                              (t * t * t) * p3;
+                              
+            new_points.push_back(point);
+        }
+    }
+    
+    points = new_points;
+}
+
+void GraphMathObject::build_points_from_bezier()
+{
+    if (is_bezier_path && bezier_dirty) {
+        subdivide_bezier_curves();
+        bezier_dirty = false;
+        stroke_dirty = true;
+    }
+}
+
+std::vector<glm::vec3> GraphMathObject::getAllBezierPoints() {
+    return bezier_points;
+}
+
+void GraphMathObject::setAllBezierPoints(const std::vector<glm::vec3>& pts) {
+    if (pts.size() != bezier_points.size() || (pts.size() > 0 && glm::distance(pts[0], bezier_points[0]) > 0.0f)) {
+        bezier_points = pts;
+        is_bezier_path = !bezier_points.empty();
+        bezier_dirty = true;
+        build_points_from_bezier();
+    }
+}

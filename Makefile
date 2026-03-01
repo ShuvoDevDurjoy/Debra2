@@ -31,7 +31,13 @@ all: $(OUTPUT)
 
 # Linking
 $(OUTPUT): $(OBJ) $(GLAD_OBJ)
-	$(CXX) $(CXXFLAGS) -o $@ $^ -L $(LIB_DIR) $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) -o $@ $^ -L $(LIB_DIR) $(LDFLAGS) $(INCLUDE_DIRS)
+
+main1: $(filter-out build/main.o,$(OBJ)) $(GLAD_OBJ) main1.cpp
+	$(CXX) $(CXXFLAGS) $(INCLUDE_DIRS) -o $@ $^ -L $(LIB_DIR) $(LDFLAGS)
+
+demo_all_features: $(filter-out build/main.o,$(OBJ)) $(GLAD_OBJ) demo_all_features.cpp
+	$(CXX) $(CXXFLAGS) $(INCLUDE_DIRS) -o $@ $^ -L $(LIB_DIR) $(LDFLAGS)
 
 # Compile C++ source files
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp | $(OBJ_DIR)

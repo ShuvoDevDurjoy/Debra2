@@ -5,7 +5,7 @@ MouseEventListener *GraphApp::mouseEventMangager;
 glm::mat4 GraphApp::view, GraphApp::projection;
 glm::vec3 GraphApp::cameraPos;
 glm::vec3 GraphApp::camera_center = glm::vec3(0, 0, 0);
-float GraphApp::lastX = 0, GraphApp::lastY = 0, GraphApp::rotX = 10, GraphApp::rotY = 30;
+float GraphApp::lastX = 0, GraphApp::lastY = 0, GraphApp::rotX = 0, GraphApp::rotY = 0;
 int GraphApp::drawCount = 0;
 
 GraphApp::GraphApp()

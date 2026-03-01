@@ -65,6 +65,7 @@ public:
     ~GraphApp() {};
     GLFWwindow *getWindow() { return window; };
     Shader *getShader() { return shader; };
+    Shader *getTextShader() { return text_shader; };
     void refreshOpenGL(std::vector<float> &, int, int);
     void setColor(float, float, float);
     void run(Graph *);

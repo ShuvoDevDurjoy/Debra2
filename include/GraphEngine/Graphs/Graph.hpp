@@ -4,8 +4,8 @@
 #include <vector>
 #include <algorithm>
 // #include <variant>
-#include "../include/glad.h"
-#include "../include/glfw3.h"
+#include <glad.h>
+#include <glfw3.h>
 #include "../Core/Shader.hpp"
 #include <climits>
 #include <cstdarg>
@@ -149,6 +149,13 @@ private:
 
     std::vector<float> allPoints;
 
+    struct TextItem {
+        std::string text;
+        float x, y, scale;
+        GraphColor color;
+    };
+    std::vector<TextItem> textItems;
+
 private:
     // contain the increment per ticks for cartisian and polar co-ordiante graph
     int cartisanReset = 0;
@@ -216,9 +223,6 @@ private:
     void drawBox();
     void drawAxis();
 
-    void addText(const std::string &text, float x, float y, float scale = 1.0f, GraphColor *color = new GraphColor());
-
-    void drawText(int);
 
     void generateGrid();
     void drawGrid();
@@ -236,6 +240,9 @@ public:
     ~Graph() {};
 
     static Graph *getInstance(float = 0.0f);
+
+    void addText(const std::string &text, float x, float y, float scale = 1.0f, GraphColor *color = new GraphColor());
+    void drawText(int);
 
     // template <typename... T>
     // singletonGraph* insertVertices(CartisanFunctionTypeVariant, T...);

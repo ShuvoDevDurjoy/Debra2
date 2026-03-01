@@ -8,7 +8,7 @@
 
 
 class ThreeDObject: public GraphMathObject{
-    private:
+    protected:
         std::string vertexShaderPath = "./shaders/quadratic_shaders/vertex.vs";
         std::string fragmentShaderPath = "./shaders/quadratic_shaders/fragment.fs";
         std::string geometricShaderPath = "./shaders/quadratic_shaders/geometry.gs";

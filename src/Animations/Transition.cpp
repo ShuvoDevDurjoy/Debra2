@@ -6,39 +6,47 @@ Transition::Transition(GraphObject *object, GraphObject *targetObj, float start_
 
 void Transition::Init()
 {
+    originalBezierPoints = targetObject->getAllBezierPoints();
+    std::vector<glm::vec3> targetBezierPoints = morphObject->getAllBezierPoints();
+
+    // Match bezier arrays sizes by padding
+    int b_res1 = originalBezierPoints.size();
+    int b_res2 = targetBezierPoints.size();
     
-    int resolution1 = targetObject->getPointsSize() - 1;
-    int resolution2 = morphObject->getPointsSize() - 1;
-    if (resolution1 > resolution2)
-    {
-        morphObject->interpolate(resolution1);
-        targetObject->interpolate(resolution1);
-    }
-    else
-    {
-        targetObject->interpolate(resolution2);
-        morphObject->interpolate(resolution2);
+    // We must ensure they are both cubic (multiples of 4, or at least consistent)
+    // For simplicity, just pad with the last point.
+    if (b_res1 > 0 && b_res2 > 0) {
+        float epsilon = 0.0001f;
+        while(originalBezierPoints.size() < targetBezierPoints.size()) {
+             glm::vec3 last = originalBezierPoints.back();
+             originalBezierPoints.push_back(last + glm::vec3(epsilon, 0, 0));
+             epsilon += 0.0001f;
+        }
+        epsilon = 0.0001f;
+        while(targetBezierPoints.size() < originalBezierPoints.size()) {
+             glm::vec3 last = targetBezierPoints.back();
+             targetBezierPoints.push_back(last + glm::vec3(epsilon, 0, 0));
+             epsilon += 0.0001f;
+        }
     }
     
-    originalPoints = targetObject->points;
-    // fillOriginalPoints = targetObject->current_fill_points;
+    // Store the matched target set in the morphObject's flattened state for the duration
+    this->targetBezierPointsMatched = targetBezierPoints;
     
     is_initialized = true;
 }
 
 void Transition::morphPoints(float alpha)
 {
-    for (int i = 0; i < targetObject->points.size(); ++i)
-    {
-        glm::vec3 p = glm::mix(originalPoints[i], morphObject->points[i], alpha);
-        targetObject->points[i] = p;
+    std::vector<glm::vec3> current_pts;
+    current_pts.reserve(originalBezierPoints.size());
+    
+    for (size_t i = 0; i < originalBezierPoints.size(); ++i) {
+        glm::vec3 p = glm::mix(originalBezierPoints[i], targetBezierPointsMatched[i], alpha);
+        current_pts.push_back(p);
     }
     
-    // for (int i = 0; i < targetObject->getFillSize(); ++i){
-    //     glm::vec3 p = glm::mix(fillOriginalPoints[i], morphObject->current_fill_points[i], alpha);
-    //     targetObject->current_fill_points[i] = p;
-    // }
-
+    targetObject->setAllBezierPoints(current_pts);
 }
 
 void Transition::play(float dt)

@@ -1,4 +1,5 @@
 #include "../../include/GraphEngine/Graphs/Graph.hpp"
+#include "../../include/GraphEngine/Rendering/Font.hpp"
 #include <cmath>
 
 Graph *Graph::instance = nullptr;
@@ -165,6 +166,8 @@ void Graph::draw(float tick)
         }
 
         AnimationManager::Run(tick);
+        
+        drawText(0); // Draw all added text
     }
     catch (const std::exception &e)
     {
@@ -192,4 +195,23 @@ Graph *Graph::getInstance(float speed)
 void Graph::run()
 {
     app->run(instance);
+}
+
+void Graph::addText(const std::string &text, float x, float y, float scale, GraphColor *color)
+{
+    textItems.push_back({text, x, y, scale, *color});
+}
+
+void Graph::drawText(int windowWidth)
+{
+    if (textItems.empty()) return;
+    
+    Shader* textShader = app->getTextShader();
+    textShader->use();
+    textShader->setMat4("projection", Font::projection);
+    
+    for (const auto &item : textItems)
+    {
+        Font::Render(item.text, item.x, item.y, item.scale, item.color.RED, item.color.GREEN, item.color.BLUE);
+    }
 }
