@@ -46,10 +46,6 @@ public:
 
     float use_bezier_always = false;
 
-    int adaptive_max_depth = 8;
-    float adaptive_tolerance = 0.01f;
-    float adaptive_min_distance = 0.001f;
-
     Var func_var;
 
     glm::vec3 (*func)(float, Var) = nullptr;
@@ -84,6 +80,8 @@ public:
     std::vector<GraphObject *> subGraphObjects;
     std::vector<float> updateStartTime;
     std::vector<float> updateEndTime;
+
+    std::vector<int> sub_path_start_indices;
 
 protected:
     void update(float dt) override;
@@ -154,6 +152,14 @@ public:
     void functionalInterpolate(int);
 
     void interpolateColor(int);
+
+    void start_bezier_path(glm::vec3 start_point) override;
+    void add_cubic_bezier_curve_to(glm::vec3 control1, glm::vec3 control2, glm::vec3 end_anchor) override;
+    void add_quadratic_bezier_curve_to(glm::vec3 control, glm::vec3 end_anchor) override;
+    void add_line_to(glm::vec3 end_anchor) override;
+    void close_path();
+    void build_points_from_bezier() override;
+    void subdivide_bezier_curves() override;
 
     void generatePoints(glm::vec3 (*func)(float, Var), Var v);
     void makeSmooth();

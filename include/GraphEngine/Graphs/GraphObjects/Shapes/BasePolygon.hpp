@@ -48,6 +48,8 @@ public:
             add_line_to(next_corner); // This generates a cubic representation of a line
         }
 
+        close_path();
+
         setDimension(minx, maxX, minY, maxY);
         build_points_from_bezier();
     }

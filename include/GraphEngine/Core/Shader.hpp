@@ -5,9 +5,9 @@
 #include <fstream>
 #include <sstream>
 #include <string>
-#include "../include/glad.h"
-#include "../Utils/Utils.hpp"
-#include "../../glm/glm.hpp"
+#include <glad.h>
+#include <GraphEngine/Utils/Utils.hpp>
+#include <glm/glm.hpp>
 
 enum shaderTypes
 {

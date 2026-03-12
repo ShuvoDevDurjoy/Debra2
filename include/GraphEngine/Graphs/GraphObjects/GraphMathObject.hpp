@@ -89,6 +89,21 @@ public:
     bool is_bezier_path = false;
     std::vector<glm::vec3> bezier_points; // Stores cubic bezier points: anchor, control1, control2, anchor ...
     int bezier_subdivision_resolution = 64;
+
+    // Sub-path tracking (Manim-style anchor-coincidence detection)
+    // Each entry is the index into bezier_points where a new sub-path begins.
+    // Populated by start_bezier_path() for subsequent calls.
+    std::vector<int> bezier_sub_path_starts;
+
+    // After subdivide_bezier_curves(), this holds (firstVertex, vertexCount) per sub-path
+    // for use with glMultiDrawArrays(GL_LINE_STRIP, ...).
+    std::vector<std::pair<int,int>> point_sub_path_ranges;
+
+    // Adaptive subdivision parameters (used by subdivide_bezier_curves)
+    int adaptive_max_depth = 8;
+    float adaptive_tolerance = 0.01f;
+    float adaptive_min_distance = 0.001f;
+
     
     std::vector<GraphColor> stroke_colors;
     std::vector<GraphColor> fill_colors;
@@ -153,12 +168,12 @@ public:
     virtual void updatePoints() = 0;
 
     // Bezier Path Methods
-    void start_bezier_path(glm::vec3 start_point);
-    void add_cubic_bezier_curve_to(glm::vec3 control1, glm::vec3 control2, glm::vec3 end_anchor);
-    void add_quadratic_bezier_curve_to(glm::vec3 control, glm::vec3 end_anchor);
-    void add_line_to(glm::vec3 end_anchor);
-    void build_points_from_bezier();
-    virtual void subdivide_bezier_curves();
+    virtual void start_bezier_path(glm::vec3 start_point) = 0;
+    virtual void add_cubic_bezier_curve_to(glm::vec3 control1, glm::vec3 control2, glm::vec3 end_anchor) = 0;
+    virtual void add_quadratic_bezier_curve_to(glm::vec3 control, glm::vec3 end_anchor) = 0;
+    virtual void add_line_to(glm::vec3 end_anchor) = 0;
+    virtual void build_points_from_bezier() = 0;
+    virtual void subdivide_bezier_curves() = 0;
     virtual std::vector<glm::vec3> getAllBezierPoints();
     virtual void setAllBezierPoints(const std::vector<glm::vec3>& pts);
 

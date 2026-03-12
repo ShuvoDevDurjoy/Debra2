@@ -11,6 +11,8 @@
 #include "../include/GraphEngine/Graphs/GraphObjects/Graphing/GridBox.hpp"
 #include "../include/GraphEngine/Graphs/GraphObjects/Graphing/Dot.hpp"
 #include "../include/GraphEngine/Graphs/GraphObjects/Shapes/Circle.hpp"
+#include "../include/GraphEngine/Graphs/GraphObjects/Shapes/Text.hpp"
+
 #include "../include/GraphEngine/Graphs/GraphObjects/Shapes/BasePolygon.hpp"
 #include "../include/GraphEngine/Animations/Creation.hpp"
 #include "../include/GraphEngine/Animations/Translate.hpp"
@@ -411,8 +413,25 @@ int main(){
     circ->setStrokeWidth(5.f);
 
     Rectangle *rect = new Rectangle(20, -10, 10);
+    std::cout << "point size: " << rect->getPointsSize() << std::endl;
+    rect->setStrokeWidth(5.0f);
     graph->play(rect);
 
+    Text *title = new Text("Shuvo", -50, 20, 10.0f);
+
+    
+    TestObject* test = new TestObject();
+    
+    test->start_bezier_path(glm::vec3(-20, -20, 0));
+    test->add_line_to(glm::vec3(0, 0, 0));
+    
+    test->start_bezier_path(glm::vec3(-20, 20, 0));
+    test->add_line_to(glm::vec3(20, 20, 0));
+    test->build_points_from_bezier();
+    
+    
+    graph->play(test);
+    graph->play(title);
     graph->play(circ);
 
     graph->run();

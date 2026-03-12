@@ -125,8 +125,8 @@ void main()
     vec3 miterEnd   = isEnd   ? perp1 : norm3(perp1 + perp2);
     
     // Fallback for degenerate miters
-    if(length(miterStart) < 1e-3) miterStart = perp1;
-    if(length(miterEnd) < 1e-3) miterEnd = perp1;
+    if(isStart) miterStart = perp1;
+    if(isEnd) miterEnd = perp1;
 
     float segLen = length(P1-P0);
     

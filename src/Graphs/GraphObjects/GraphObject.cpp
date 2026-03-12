@@ -66,10 +66,27 @@ void GraphObject::updateStroke(float dt)
         glBindVertexArray(StrokeVAO);
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        // glEnable(GL_POLYGON_OFFSET_FILL);
-        // glPolygonOffset(-1.0f, -1.0f); // pull forward slightly
 
-        glDrawArrays(GL_LINE_STRIP, drawStart, getSize());
+        if (!point_sub_path_ranges.empty()) {
+            // Multi-sub-path: issue one GL_LINE_STRIP per sub-path so they never connect.
+            // All sub-paths live in the same VAO/VBO — zero data duplication.
+            std::vector<GLint>   firsts;
+            std::vector<GLsizei> counts;
+            firsts.reserve(point_sub_path_ranges.size());
+            counts.reserve(point_sub_path_ranges.size());
+            for (const auto& [first, count] : point_sub_path_ranges) {
+                firsts.push_back(static_cast<GLint>(first));
+                counts.push_back(static_cast<GLsizei>(count));
+            }
+            glMultiDrawArrays(GL_LINE_STRIP,
+                              firsts.data(),
+                              counts.data(),
+                              static_cast<GLsizei>(firsts.size()));
+        } else {
+            // Single continuous path (or non-bezier path)
+            glDrawArrays(GL_LINE_STRIP, drawStart, getSize());
+        }
+
         // if (!depthWasEnabled)
         //     glDisable(GL_DEPTH_TEST);
     }
@@ -194,53 +211,59 @@ inline void showPoints(std::vector<glm::vec3> pts)
 
 void GraphObject::setStrokeData()
 {
-    // Generate fine points from bezier controls before generating stroke arrays
-    if (is_bezier_path) {
+    if (is_bezier_path)
+    {
         build_points_from_bezier();
     }
+
+    if (points.empty())
+        return;
 
     stroke_current_points.clear();
     stroke_prev_points.clear();
     stroke_next_points.clear();
-    if (!getSize())
+
+    // If no sub-path ranges were defined (e.g., not a bezier path),
+    // treat the whole thing as one range.
+    if (point_sub_path_ranges.empty())
     {
-        std::cerr << "No Points there to set as stroke data" << std::endl;
-        return;
-    }
-    for (int i = 0; i < getSize(); ++i)
-    {
-        stroke_current_points.push_back(points[i]);
+        point_sub_path_ranges.push_back({0, (int)points.size()});
     }
 
-    if (isEqual(points[0], points[getSize() - 1]) && getSize() >= 2)
+    for (const auto &range : point_sub_path_ranges)
     {
-        stroke_prev_points.push_back(points[getSize() - 2]);
-    }
-    else
-    {
-        stroke_prev_points.push_back(points[0]);
+        int start = range.first;
+        int count = range.second;
+        int end = start + count - 1;
+
+        for (int i = start; i <= end; ++i)
+        {
+            // 1. Current Point
+            stroke_current_points.push_back(points[i]);
+
+            // 2. Previous Point: If at start of sub-path, prev = self
+            if (i == start)
+            {
+                stroke_prev_points.push_back(points[i]);
+            }
+            else
+            {
+                stroke_prev_points.push_back(points[i - 1]);
+            }
+
+            // 3. Next Point: If at end of sub-path, next = self
+            if (i == end)
+            {
+                stroke_next_points.push_back(points[i]);
+            }
+            else
+            {
+                stroke_next_points.push_back(points[i + 1]);
+            }
+        }
     }
 
-    // add all the points upto getSize() - 1 to the prev point
-    for (int i = 0; i < getSize() - 1; ++i)
-    {
-        stroke_prev_points.push_back(points[i]);
-    }
-
-    // setting up next points for stroke
-    for (int i = 1; i < getSize(); ++i)
-    {
-        stroke_next_points.push_back(points[i]);
-    }
-
-    if (isEqual(points[0], points[getSize() - 1]) && getSize() >= 2)
-    {
-        stroke_next_points.push_back(points[1]);
-    }
-    else
-    {
-        stroke_next_points.push_back(points[getSize() - 1]);
-    }
+    stroke_dirty = false;
 }
 
 inline bool intersectSegments(const glm::vec2 &p1, const glm::vec2 &p2,
@@ -838,6 +861,84 @@ void GraphObject::nextTo(GraphObject *target, Position pos, float buffer)
     translate = position;
     // setTranslate(position);
     updatePoints();
+}
+
+void GraphObject::start_bezier_path(glm::vec3 start_point)
+{
+    // Fully reset the bezier path (clear the old one before starting a new object)
+    if (bezier_points.empty()) {
+        bezier_sub_path_starts.clear();
+    }
+    // Delegate to base — it handles both first-time and subsequent sub-paths correctly
+    GraphMathObject::start_bezier_path(start_point);
+}
+
+void GraphObject::close_path(){
+    if (!bezier_points.empty()) {
+        // Connect the last point to the first point of the current sub-path
+        glm::vec3 start_point = bezier_points[bezier_sub_path_starts.back()];
+        add_line_to(start_point);
+    }
+}
+
+void GraphObject::add_cubic_bezier_curve_to(glm::vec3 control1, glm::vec3 control2, glm::vec3 end_anchor)
+{
+    if (bezier_points.empty())
+    {
+        start_bezier_path(glm::vec3(0, 0, 0));
+    }
+    bezier_points.push_back(control1);
+    bezier_points.push_back(control2);
+    bezier_points.push_back(end_anchor);
+}
+
+void GraphObject::add_quadratic_bezier_curve_to(glm::vec3 control, glm::vec3 end_anchor)
+{
+    // Convert quadratic to cubic bezier for unified storage
+    if (bezier_points.empty())
+    {
+        start_bezier_path(glm::vec3(0, 0, 0));
+    }
+    glm::vec3 start_anchor = bezier_points.back();
+
+    // Control1 = Start + 2/3 * (Control - Start)
+    glm::vec3 control1 = start_anchor + (2.0f / 3.0f) * (control - start_anchor);
+    // Control2 = End + 2/3 * (Control - End)
+    glm::vec3 control2 = end_anchor + (2.0f / 3.0f) * (control - end_anchor);
+
+    add_cubic_bezier_curve_to(control1, control2, end_anchor);
+}
+
+void GraphObject::add_line_to(glm::vec3 end_anchor)
+{
+    if (bezier_points.empty())
+    {
+        start_bezier_path(glm::vec3(0, 0, 0));
+    }
+    glm::vec3 start_anchor = bezier_points.back();
+
+    // For a straight line, controls are 1/3 and 2/3 along the line
+    glm::vec3 control1 = start_anchor + (1.0f / 3.0f) * (end_anchor - start_anchor);
+    glm::vec3 control2 = start_anchor + (2.0f / 3.0f) * (end_anchor - start_anchor);
+
+    add_cubic_bezier_curve_to(control1, control2, end_anchor);
+}
+
+void GraphObject::subdivide_bezier_curves()
+{
+    // Delegate to base class — it handles sub-path-aware subdivision
+    // and populates point_sub_path_ranges for glMultiDrawArrays.
+    GraphMathObject::subdivide_bezier_curves();
+}
+
+void GraphObject::build_points_from_bezier()
+{
+    if (is_bezier_path && bezier_dirty)
+    {
+        subdivide_bezier_curves();
+        bezier_dirty = false;
+        stroke_dirty = true;
+    }
 }
 
 std::vector<glm::vec3> GraphObject::getAllBezierPoints() {
