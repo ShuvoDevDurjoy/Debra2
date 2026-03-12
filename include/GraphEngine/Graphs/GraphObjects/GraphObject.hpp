@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <limits>
 #include <stdlib.h>
+#include <functional>
 
 #include "../../Utils/GraphColor.hpp"
 #include "../../Utils/Config.hpp"
@@ -44,6 +45,10 @@ public:
     bool fill_data_initialized = false;
 
     float use_bezier_always = false;
+
+    int adaptive_max_depth = 8;
+    float adaptive_tolerance = 0.01f;
+    float adaptive_min_distance = 0.001f;
 
     Var func_var;
 
@@ -151,6 +156,7 @@ public:
     void interpolateColor(int);
 
     void generatePoints(glm::vec3 (*func)(float, Var), Var v);
+    void makeSmooth();
     void UpdateGraphWithFunction(float);
     void setUpdater(glm::vec3 (*updater_function)(float, float), float s_t, float d)
     {

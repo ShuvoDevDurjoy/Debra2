@@ -96,26 +96,21 @@ void main()
     float selfBias = float(vId[0]) * 1e-6;
     float z_bias = float(u_layer + vId[0]) * 1e-6;
 
-    mat4 vm = view * model;
-
-    // Transform all defining points into View Space
-    vec3 P0 = (vm * vec4(gs_in[0].cp, 1.0)).xyz;
-    vec3 P1 = (vm * vec4(gs_in[1].cp, 1.0)).xyz;
-    vec3 PP = (vm * vec4(gs_in[0].pP, 1.0)).xyz;
-    vec3 NP = (vm * vec4(gs_in[1].nP, 1.0)).xyz;
+    // Transform points: Operate completely in OBJECT SPACE!
+    vec3 P0 = gs_in[0].cp;
+    vec3 P1 = gs_in[1].cp;
+    vec3 PP = gs_in[0].pP;
+    vec3 NP = gs_in[1].nP;
 
     bool isStart = length(P0 - PP) < 1e-5;
     bool isEnd   = length(P1 - NP) < 1e-5;
 
-    // --- segment directions in View Space ---
+    // --- segment directions in Object Space ---
     vec3 d1 = norm3(P1 - P0);
     vec3 d0 = isStart ? d1 : norm3(P0 - PP);
     vec3 d2 = isEnd   ? d1 : norm3(NP - P1);
 
-    // --- stable perpendicular (Always Screen-Facing!) ---
-    // In view space, the camera is at (0,0,0) looking down -Z.
-    // By forcing the normal to be (0,0,1), we extrude purely in Screen Space (XY).
-    // This entirely removes twisting, 3D ribbon fracturing, and overlapping Z-fighting.
+    // Flat Ribbon: Paper lies on the XY plane in Object space; its normal is (0,0,1)
     vec3 planeN = vec3(0.0, 0.0, 1.0);
 
     vec3 perp0 = norm3(cross(planeN, d0));
@@ -126,8 +121,8 @@ void main()
     if(length(perp0) < 1e-3) perp0 = perp1;
     if(length(perp2) < 1e-3) perp2 = perp1;
 
-    vec3 miterStart = isStart ? norm3(perp1 + perp0) : norm3(perp0 + perp1);
-    vec3 miterEnd   = isEnd   ? norm3(perp1 + perp2) : norm3(perp1 + perp2);
+    vec3 miterStart = isStart ? perp1 : norm3(perp0 + perp1);
+    vec3 miterEnd   = isEnd   ? perp1 : norm3(perp1 + perp2);
     
     // Fallback for degenerate miters
     if(length(miterStart) < 1e-3) miterStart = perp1;
@@ -240,8 +235,8 @@ void main()
         controlY = tan(theta * 0.5) * segLen * 0.6;
         // Clamp controlY to line width limits to avoid extreme curves
         float maxY = u_line_width * 2.0;   // maximum allowed offset
-        float minY = u_line_width * 0.1;   // minimum to keep small circles smooth
-        controlY = clamp(controlY, minY, maxY);
+        // Removing `minY` to allow nearly flat lines to evaluate perfectly straight!
+        controlY = clamp(controlY, -maxY, maxY);
         controlX = segLen * bias;
     } else if(abs(theta) > radians(45.0) && !isStart && !isEnd) {
         // Ultra-sharp corner: use bevel instead of curve
@@ -299,36 +294,34 @@ void main()
     vec3 N = perp1;
     vec3 origin = P0;
 
-    // Since p0..p3 are already in View Space, we only multiply by the projection matrix!
+    // Since p0..p3 are in Object Space, we multiply by projection * view * model
+    mat4 pvm = projection * view * model;
+
     vec3 local = p0-origin;
     pCurrent = vec2(dot(local,T), dot(local,N));
     pProgress = 0.0; outColor = gs_in[0].color;
-    vec4 clip = projection * vec4(p0, 1.0); 
-    // clip.z -= z_bias * clip.w;
+    vec4 clip = pvm * vec4(p0, 1.0); 
     gl_Position = clip;
     EmitVertex();
 
     local = p1-origin;
     pCurrent = vec2(dot(local,T), dot(local,N));
     pProgress = 0.0; outColor = gs_in[0].color;
-    clip = projection * vec4(p1, 1.0); 
-    // clip.z -= z_bias * clip.w;
+    clip = pvm * vec4(p1, 1.0); 
     gl_Position = clip;
     EmitVertex();
 
     local = p2-origin;
     pCurrent = vec2(dot(local,T), dot(local,N));
     pProgress = 1.0; outColor = gs_in[1].color;
-    clip = projection * vec4(p2, 1.0);
-    // clip.z -= z_bias * clip.w;
+    clip = pvm * vec4(p2, 1.0);
     gl_Position = clip; 
     EmitVertex();
 
     local = p3-origin;
     pCurrent = vec2(dot(local,T), dot(local,N));
     pProgress = 1.0; outColor = gs_in[1].color;
-    clip = projection * vec4(p3, 1.0); 
-    // clip.z -= z_bias * clip.w;
+    clip = pvm * vec4(p3, 1.0); 
     gl_Position = clip;
     EmitVertex();
 

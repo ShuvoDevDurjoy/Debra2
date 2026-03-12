@@ -36,6 +36,8 @@ class Circle: public BasePolygon{
             // Bottom to Right
             add_cubic_bezier_curve_to(b + glm::vec3(k, 0, 0), r + glm::vec3(0, -k, 0), r);
 
+            makeSmooth(); // Crucial to render true curves instead of just 4 straight anchor lines!
+
             setDimension(centerX - radius, centerX + radius, centerY - radius, centerY + radius);
             build_points_from_bezier();
         }

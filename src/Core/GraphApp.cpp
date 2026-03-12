@@ -42,20 +42,31 @@ int GraphApp::InitWindow()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    // glfwWindowHint(GLFW_STENCIL_BITS, 8); // Request stencil buffer for zero-overlap logic
 
     // create window
     window = glfwCreateWindow(window_width, window_height, "Debra", nullptr, nullptr);
 
-    cameraPos = glm::vec3(0.0f, 0.0f, 80.0f);
+    cameraPos = glm::vec3(0.0f, 0.0f, 100.0f);
     view = glm::lookAt(
         glm::vec3(cameraPos[0], cameraPos[1], cameraPos[2]),
         glm::vec3(0.0f, 0.0f, 0.0f),
         glm::vec3(0.0f, 1.0f, 0.0f));
 
     // Projection
+    std::cout << "(window width: )" << (window_width) << std::endl;
+
+    float hFOV = 2.0f * atan((200 / 2.0f) / cameraPos.z);
+
+    float aspect = (window_width * 1.0f) / (window_height * 1.0f);
+
+    // 2. GLM uses Vertical FOV, so we must convert it
+    // vFOV = 2 * atan( tan(hFOV/2) / aspect )
+    float vFOV = 2.0f * atan(tan(hFOV / 2.0f) / aspect);
+    // Projection
     projection = glm::perspective(
-        glm::radians(45.0f),
-        (window_width * 1.0f) / (window_height * 1.0f), // replace with window ratio if needed
+        vFOV,
+        aspect, // replace with window ratio if needed
         0.1f,
         500.0f);
 
@@ -258,6 +269,13 @@ void GraphApp::onKeyPressedOnceCallback(const KeyEvent &event)
     else if (event.key == GLFW_KEY_RIGHT)
     {
         camera_center.x -= 2.0f;
+    }
+    else if (event.key == GLFW_KEY_R)
+    {
+        cameraPos = glm::vec3(0.0f, 0.0f, 100.0f);
+        camera_center = glm::vec3(0, 0, 0);
+        rotX = 0;
+        rotY = 0;
     }
 
     view = glm::lookAt(

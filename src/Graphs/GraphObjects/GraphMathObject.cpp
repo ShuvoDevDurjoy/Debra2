@@ -253,17 +253,87 @@ void GraphMathObject::subdivide_bezier_curves()
         glm::vec3 p2 = bezier_points[i + 1];
         glm::vec3 p3 = bezier_points[i + 2];
         
-        for (int step = 1; step <= bezier_subdivision_resolution; ++step) {
-            float t = static_cast<float>(step) / bezier_subdivision_resolution;
-            float omt = 1.0f - t;
+        if (is_smooth) {
+            auto eval_bezier = [](glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, float t) {
+                float omt = 1.0f - t;
+                return (omt * omt * omt) * p0 + 
+                       3.0f * (omt * omt) * t * p1 + 
+                       3.0f * omt * (t * t) * p2 + 
+                       (t * t * t) * p3;
+            };
+
+            auto distPointToSegment = [](glm::vec3 p, glm::vec3 a, glm::vec3 b) -> float {
+                glm::vec3 ab = b - a;
+                float l2 = glm::dot(ab, ab);
+                if (l2 < 1e-8f)
+                    return glm::distance(p, a);
+                float t = glm::clamp(glm::dot(p - a, ab) / l2, 0.0f, 1.0f);
+                return glm::distance(p, a + t * ab);
+            };
+
+            // Detect if this bezier segment is perfectly linear (likely originated from add_line_to)
+            // If linear and user requested smooth, we apply a heuristic Catmull-Rom curve fitting
+            // using the adjacent bezier anchors to truly curve the line.
+            glm::vec3 c_p0 = p0, c_p1 = p1, c_p2 = p2, c_p3 = p3;
+            float lineDist1 = distPointToSegment(p1, p0, p3);
+            float lineDist2 = distPointToSegment(p2, p0, p3);
             
-            // Cubic Bezier Formula
-            glm::vec3 point = (omt * omt * omt) * p0 + 
-                              3.0f * (omt * omt) * t * p1 + 
-                              3.0f * omt * (t * t) * p2 + 
-                              (t * t * t) * p3;
-                              
-            new_points.push_back(point);
+            if (lineDist1 < 1e-5f && lineDist2 < 1e-5f) {
+                // Find previous and next anchors
+                glm::vec3 prev_anchor = (i >= 4) ? bezier_points[i - 4] : p0;
+                glm::vec3 next_anchor = (i + 5 < bezier_points.size()) ? bezier_points[i + 5] : p3;
+
+                // Override internal controls with catmull-rom
+                c_p1 = p0 + (p3 - prev_anchor) / 6.0f;
+                c_p2 = p3 - (next_anchor - p0) / 6.0f;
+            }
+
+            struct SampleNode {
+                float t;
+                glm::vec3 p;
+            };
+
+            std::vector<SampleNode> final_pts;
+            int adaptive_max_depth = 8;
+            float adaptive_tolerance = 0.01f;
+            float adaptive_min_distance = 0.001f;
+
+            std::function<void(SampleNode, SampleNode, int)> subdivide =
+                [&](SampleNode left, SampleNode right, int depth)
+            {
+                float t_mid = (left.t + right.t) * 0.5f;
+                glm::vec3 p_mid = eval_bezier(c_p0, c_p1, c_p2, c_p3, t_mid);
+
+                float dist = distPointToSegment(p_mid, left.p, right.p);
+                float chordDist = glm::distance(left.p, right.p);
+
+                if (depth < adaptive_max_depth && dist > adaptive_tolerance && chordDist > adaptive_min_distance)
+                {
+                    SampleNode mid = {t_mid, p_mid};
+                    subdivide(left, mid, depth + 1);
+                    subdivide(mid, right, depth + 1);
+                }
+                else
+                {
+                    if (final_pts.empty() || glm::distance(final_pts.back().p, left.p) > 1e-7f)
+                        final_pts.push_back(left);
+                    final_pts.push_back(right);
+                }
+            };
+
+            SampleNode n1 = {0.0f, p0};
+            SampleNode n2 = {1.0f, p3};
+            subdivide(n1, n2, 0);
+
+            for (size_t j = 0; j < final_pts.size(); ++j) {
+                if (j == 0 && glm::distance(new_points.back(), final_pts[j].p) < 1e-7f) continue;
+                new_points.push_back(final_pts[j].p);
+            }
+        } else {
+            // When not smooth, we simply connect the anchors directly without intermediate points.
+            // Note: If you use add_cubic_bezier_curve_to, it will render as a straight line
+            // between anchors unless makeSmooth() is called!
+            new_points.push_back(p3);
         }
     }
     

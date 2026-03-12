@@ -7,10 +7,10 @@
 #include <climits>
 #include <cmath>
 #include <unordered_map>
+#include <functional>
 
 #include "../../Utils/Config.hpp"
 #include "../../Utils/GraphColor.hpp"
-
 #include "../../Core/Shader.hpp"
 #include "../../../glm/glm.hpp"
 #include "../../../glm/gtc/matrix_transform.hpp"
@@ -141,6 +141,7 @@ public:
     void setStrokeOpacity(float);
     void setStrokeWidth(float);
     void setSubdivisions(int res) { bezier_subdivision_resolution = res; bezier_dirty = true; }
+    void setSmooth(bool smooth = true) { is_smooth = smooth; bezier_dirty = true; }
     void moveTo(Position pos = Position::NONE);
     void moveTo(glm::vec3);
     void setMoveTo(glm::vec3);
@@ -184,6 +185,7 @@ public:
 protected:
     bool bezier_dirty = true;
     bool stroke_dirty = true;
+    bool is_smooth = false;
 };
 
 #endif

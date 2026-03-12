@@ -106,11 +106,11 @@ void runMain(){
         discard;
 
     // Calculate distance to bezier curve
-    // For nearly-straight segments (small controlY), use line distance
+    // For nearly-straight segments (small controlY), use infinite line distance 
+    // to strictly rely on the geometry miter quad for sharp cutoff, removing bumps.
     float d;
     if(abs(perpControl.y) < 0.05) {
-        // Nearly straight: use line segment distance for stability
-        d = sdSegment(pCurrent.xy, prepStart, prevEnd);
+        d = abs(pCurrent.y);
     } else {
         // Curved segment: use proper bezier distance
         d = sdBezier(pCurrent.xy, prepStart, perpControl, prevEnd);
@@ -127,7 +127,7 @@ void runMain(){
     
     // Smooth step from inner edge to outer edge
     // This gives proper anti-aliased strokes even at sharp corners
-    float alpha = smoothstep(radius + aa_width, radius - aa_width, d);
+    float alpha = smoothstep(radius + aa_width, radius - aa_width, d );
     
     // Clamp to prevent over-bright pixels
     alpha = clamp(alpha, 0.0, 1.0);

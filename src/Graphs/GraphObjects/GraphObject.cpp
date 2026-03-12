@@ -67,7 +67,7 @@ void GraphObject::updateStroke(float dt)
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         // glEnable(GL_POLYGON_OFFSET_FILL);
-        glPolygonOffset(-1.0f, -1.0f); // pull forward slightly
+        // glPolygonOffset(-1.0f, -1.0f); // pull forward slightly
 
         glDrawArrays(GL_LINE_STRIP, drawStart, getSize());
         // if (!depthWasEnabled)
@@ -417,43 +417,82 @@ void GraphObject::generatePoints(glm::vec3 (*func)(float, Var), Var v)
 {
     this->func = func;
     this->func_var = v;
-    float p = abs(range.second - range.first) / resolution;
-    float t = range.first;
-    float minx = INT_MAX, maxX = INT_MIN, minY = INT_MAX, maxY = INT_MIN;
-    
-    // Clear previous data
-    points.clear();
-    bezier_points.clear();
-    is_bezier_path = true;
 
-    for (int i = 0; i <= resolution; ++i)
+    float t_start = range.first;
+    float t_end = range.second;
+
+    int num_samples = std::max(128, resolution);
+    std::vector<float> t_values;
+    for (int i = 0; i <= num_samples; ++i)
     {
-        glm::vec3 point = func(t, v);
-        t += p;
-        
-        minx = std::min(minx, (point[0]));
-        maxX = std::max(maxX, (point[0]));
-        minY = std::min(minY, (point[1]));
-        maxY = std::max(maxY, (point[1]));
-        
-        points.push_back(point);
-        
-        // Populate Bezier path
-        if (i == 0) {
-            start_bezier_path(point);
-        } else {
-            add_line_to(point); // Represents linear segment as a cubic bezier
+        t_values.push_back(t_start + (t_end - t_start) * (float)i / (float)num_samples);
+    }
+
+    auto sample = [&](float t)
+    {
+        return func(t, v);
+    };
+
+    // Initialize bezier path using Catmull-Rom to Cubic conversion for 
+    // smooth curve matching the mathematical function
+    if (t_values.size() > 1) {
+        std::vector<glm::vec3> pts;
+        for (float t : t_values) {
+            pts.push_back(sample(t));
+        }
+
+        start_bezier_path(pts[0]);
+        for (size_t i = 0; i < pts.size() - 1; ++i) {
+            glm::vec3 p0 = (i == 0) ? pts[i] : pts[i - 1];
+            glm::vec3 p1 = pts[i];
+            glm::vec3 p2 = pts[i + 1];
+            glm::vec3 p3 = (i + 2 < pts.size()) ? pts[i + 2] : pts[i + 1];
+
+            // Catmull-Rom to Cubic Bezier conversion
+            glm::vec3 c1 = p1 + (p2 - p0) / 6.0f;
+            glm::vec3 c2 = p2 - (p3 - p1) / 6.0f;
+            
+            add_cubic_bezier_curve_to(c1, c2, p2);
         }
     }
 
-    setDimension(minx, maxX, minY, maxY);
-    
-    // Optimization: If the sampled path is already dense, don't over-subdivide in Rendering
-    if (resolution > 100) {
-        bezier_subdivision_resolution = 1;
-    }
-    
+    // Rely on the standard bezier building method
     build_points_from_bezier();
+    
+    // Calculate extents for dimensions
+    float minx = std::numeric_limits<float>::max(), maxX = -std::numeric_limits<float>::max();
+    float minY = std::numeric_limits<float>::max(), maxY = -std::numeric_limits<float>::max();
+    for(const auto& p : points) {
+        minx = std::min(minx, p.x);
+        maxX = std::max(maxX, p.x);
+        minY = std::min(minY, p.y);
+        maxY = std::max(maxY, p.y);
+    }
+
+    setDimension(minx, maxX, minY, maxY);
+}
+
+void GraphObject::makeSmooth()
+{
+    setSmooth(true);
+    build_points_from_bezier();
+    
+    // Update dimensions after smooth points are generated
+    if (!points.empty()) {
+        float minx = std::numeric_limits<float>::max(), maxX = -std::numeric_limits<float>::max();
+        float minY = std::numeric_limits<float>::max(), maxY = -std::numeric_limits<float>::max();
+
+        for (const auto &p : points)
+        {
+            minx = std::min(minx, p.x);
+            maxX = std::max(maxX, p.x);
+            minY = std::min(minY, p.y);
+            maxY = std::max(maxY, p.y);
+        }
+
+        setDimension(minx, maxX, minY, maxY);
+        updatePoints();
+    }
 }
 
 void GraphObject::UpdateGraphWithFunction(float dt)

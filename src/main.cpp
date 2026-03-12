@@ -407,36 +407,13 @@ glm::vec3 random(float t, Var v){
 int main(){
     Graph *graph = Graph::getInstance(0);
 
-    // animation3(graph);
+    Circle *circ = new Circle(20, 0, 0);
+    circ->setStrokeWidth(5.f);
 
-    // Line *x_axis = new Line(glm::vec3(-50, 0, 0), glm::vec3(50, 0, 0));
-    // Line *y_axis = new Line(glm::vec3(0, 30, 0), glm::vec3(0, -30, 0));
-    // Line *z_axis = new Line(glm::vec3(0, 0, -50), glm::vec3(0, 0, 50));
+    Rectangle *rect = new Rectangle(20, -10, 10);
+    graph->play(rect);
 
-    // // set stroke for the lines
-    // x_axis->setStrokeWidth(0.5f);
-    // y_axis->setStrokeWidth(0.5f);
-    // z_axis->setStrokeWidth(0.5f);
-
-    Circle *circ = new Circle(20, -10, 0);
-    Dot *dot1 = new Dot(0, 0, 15, 5);
-    Dot *dot2 = new Dot(0, 0, 5, 5);
-
-    circ->setStrokeWidth(0.5f);
-    dot1->setStrokeWidth(0.5f);
-    dot2->setStrokeWidth(0.5f);
-
-    // graph->play(dot0);
-    graph->play(dot1);
-    // graph->play(new Transition(dot1, dot0, 0.0f, 5.0f));
-    graph->play(new Transition(dot1, circ, 5.0f, 5.0f));
-    // new Scale(dot1, glm::vec3(2, 2, 0), 10, 2);
-    // Animation* anim = new ShowCreation(dot1, 0, 5);
-    // anim->anim_timing_func = AnimationTimmingFunction::linearProgress;
-
-    // graph->play(x_axis);
-    // graph->play(y_axis);
-    // graph->play(z_axis);
+    graph->play(circ);
 
     graph->run();
 }
