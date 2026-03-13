@@ -129,7 +129,14 @@ Text::Text(const std::string& textStr, float x, float y, float scale) {
     float unit_scale = scale / (64.0f * BASE_PIXEL_SIZE);
 
     for (char c : textStr) {
+
+        if(c == ' '){
+            // Advance by a fixed width for spaces (e.g., 1/4 em)
+            pen_x += 0.25f * scale;
+            continue;
+        }
         Char* ch = new Char(c, pen_x, y, scale);
+        ch->setStrokeWidth(0.5f);
         add(ch);
 
         if (!FT_Load_Char(face, c, FT_LOAD_NO_BITMAP)) {

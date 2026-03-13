@@ -60,7 +60,7 @@ class ThreeDObject: public GraphMathObject{
         void uploadStrokeDataToShader() override;
         void uploadFillDataToShader() override;
 
-        void interpolate(int) override;
+        void interpolate(const GraphMathObject*, float t) override;
 
         void draw(float dt)
         {

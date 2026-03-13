@@ -99,6 +99,8 @@ public:
     // for use with glMultiDrawArrays(GL_LINE_STRIP, ...).
     std::vector<std::pair<int,int>> point_sub_path_ranges;
 
+    std::vector<GraphMathObject *> subGraphObjects;
+
     // Adaptive subdivision parameters (used by subdivide_bezier_curves)
     int adaptive_max_depth = 8;
     float adaptive_tolerance = 0.01f;
@@ -139,7 +141,8 @@ public:
     virtual void draw(float dt) = 0;
 
 public:
-    virtual void interpolate(int) = 0;
+    virtual void alignPoints(GraphMathObject*) = 0;
+    virtual void interpolate(const GraphMathObject*, float t = 0) = 0;
 
 public:
     int getPointsSize();
@@ -166,6 +169,7 @@ public:
 public:
     void setRotation(glm::vec3 rot_amount, glm::vec3 rot_pivot);
     virtual void updatePoints() = 0;
+    virtual void applyColorToVertex() = 0;
 
     // Bezier Path Methods
     virtual void start_bezier_path(glm::vec3 start_point) = 0;
@@ -176,6 +180,7 @@ public:
     virtual void subdivide_bezier_curves() = 0;
     virtual std::vector<glm::vec3> getAllBezierPoints();
     virtual void setAllBezierPoints(const std::vector<glm::vec3>& pts);
+    virtual void add(GraphMathObject *) = 0;
 
 public:
     void setStrokeColors(std::vector<GraphColor> stroke_colors);
@@ -196,6 +201,7 @@ public:
     {
         return glm::distance(a, b) < 0.0001f;
     }
+
 
 protected:
     bool bezier_dirty = true;

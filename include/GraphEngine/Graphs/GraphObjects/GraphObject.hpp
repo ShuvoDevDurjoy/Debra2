@@ -60,6 +60,13 @@ public:
     std::string fillFragmentShaderPath = "./shaders/quadratic_fill/fragment.fs";
     std::string fillGeometricShaderPath = "./shaders/quadratic_fill/geometry.gs";
 
+    std::string stencilVertexPath = "./shaders/stencil_fill/vertex.vs";
+    std::string stencilFragPath = "./shaders/stencil_fill/stencil_pass.fs";
+    std::string coverFragPath = "./shaders/stencil_fill/cover_pass.fs";
+
+    Shader *stencil_shader = nullptr;
+    Shader *cover_shader = nullptr;
+
     std::vector<GraphColor> colors;
     std::vector<GraphColor> stroke_colors;
     std::vector<GraphColor> fill_colors;
@@ -77,7 +84,6 @@ public:
     std::vector<float> fill_color_array;
 
     // contains sub graph of one graph
-    std::vector<GraphObject *> subGraphObjects;
     std::vector<float> updateStartTime;
     std::vector<float> updateEndTime;
 
@@ -137,13 +143,14 @@ public:
         update(dt);
     }
 
-    void add(GraphObject *sub_object)
+    void add(GraphMathObject *sub_object) override
     {
-        sub_object->setColor(this->colors);
-        subGraphObjects.push_back(sub_object);
+        static_cast<GraphObject*>(sub_object)->setColor(this->colors); 
+        subGraphObjects.push_back(sub_object );
     }
 
-    void interpolate(int) override;
+    void interpolate(const GraphMathObject *, float t = 0) override;
+    void alignPoints(GraphMathObject*) override;
     
     std::vector<glm::vec3> getAllBezierPoints() override;
     void setAllBezierPoints(const std::vector<glm::vec3>& pts) override;
@@ -170,7 +177,7 @@ public:
         this->updateStartTime.push_back(s_t);
         this->updateEndTime.push_back(s_t + d );
     }
-    void applyColorToVertex();
+    void applyColorToVertex() override;
 
     void setPoints(glm::vec3 p)
     {

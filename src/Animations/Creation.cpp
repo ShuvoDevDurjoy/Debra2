@@ -1,5 +1,30 @@
 #include "../../include/GraphEngine/Animations/Creation.hpp"
 
+void ShowCreation::Init()
+{
+    targetObject->showGraph = false;
+    if (!targetObject->subGraphObjects.empty())
+    {
+        //how many sub object is in
+        float buffer = 0.9f;
+        int count = targetObject->subGraphObjects.size();
+        float segment_duration = duration / count;
+        float ds = (1.0f - buffer) * segment_duration;
+        float dt = std::max(buffer * duration, 0.1f);
+        int index = 0;
+        this->targetObject->showGraph = false;
+
+        for (auto *sub : targetObject->subGraphObjects)
+        {
+            sub->showGraph = false;
+            (new ShowCreation(sub, start_time + index * ds, dt))->anim_timing_func = this->anim_timing_func;
+            index++;
+        }
+    }
+
+    is_initialized = true;
+}
+
 void ShowCreation::play(float dt)
 {
     if (dt < start_time)
@@ -7,6 +32,8 @@ void ShowCreation::play(float dt)
         progress = 0;
         return;
     }
+    if(!is_initialized)
+    Init();
     if (dt >= end_time)
     {
         progress = 1;

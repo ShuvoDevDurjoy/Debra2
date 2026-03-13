@@ -9,9 +9,10 @@ class ShowCreation: public Animation{
         glm::vec3 to;
 
     public: 
-    ShowCreation(GraphObject* object, float start_time = 0, float duration = 2.0f): Animation(object, start_time, duration){
+    ShowCreation(GraphMathObject* object, float start_time = 0, float duration = 2.0f): Animation(object, start_time, duration){
         // targetObject->prepareSubObjects(start_time, duration);
     }
+    void Init();
     void play(float dt) override;
 };
 class ShowFillCreation: public Animation{

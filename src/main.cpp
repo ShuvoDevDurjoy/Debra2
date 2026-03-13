@@ -410,29 +410,74 @@ int main(){
     Graph *graph = Graph::getInstance(0);
 
     Circle *circ = new Circle(20, 0, 0);
-    circ->setStrokeWidth(5.f);
+    circ->setStrokeWidth(5.0f);
+    Circle *circ2 = new Circle(20, -40, 0);
+    circ2->setStrokeWidth(5.0f);
 
-    Rectangle *rect = new Rectangle(20, -10, 10);
+    Rectangle *rect = new Rectangle(20, 20, 10);
     std::cout << "point size: " << rect->getPointsSize() << std::endl;
+    rect->setColor({GraphColor(1, 0, 0), GraphColor(0, 1, 0), GraphColor(0, 0, 1), GraphColor(1, 1, 0)});
     rect->setStrokeWidth(5.0f);
-    graph->play(rect);
+    graph->play(circ);
+    // graph->play(circ2);
+    // graph->play(rect);
+
+    Var v;
+    v.addVar(8.0f);
+    v.addVar(8.0f);
+    v.addVar(8.0f);
 
     Text *title = new Text("Shuvo", -50, 20, 10.0f);
+    // graph->play(title);
 
+    TestObject *buttfly_curve = new TestObject();
+    buttfly_curve->range = {sin_offset_left * M_PI, sin_offset_right * M_PI};
+    // buttfly_curve->resolution = 3000;
+    buttfly_curve->generatePoints(butterflyCurve, v);
+    // buttfly_curve->setStrokeWidth(0.5f);
+
+    graph->play(buttfly_curve);
+
+    // TestObject* test = new TestObject();
     
-    TestObject* test = new TestObject();
+    // test->start_bezier_path(glm::vec3(-20, -20, 0));
+    // test->add_line_to(glm::vec3(0, 0, 0));
     
-    test->start_bezier_path(glm::vec3(-20, -20, 0));
-    test->add_line_to(glm::vec3(0, 0, 0));
+    // test->start_bezier_path(glm::vec3(-20, 20, 0));
+    // test->add_line_to(glm::vec3(20, 20, 0));
+    // test->build_points_from_bezier();
+    // test->setColor({GraphColor(1, 0, 0), GraphColor(0, 1, 0), GraphColor(0, 0, 1)});
     
-    test->start_bezier_path(glm::vec3(-20, 20, 0));
-    test->add_line_to(glm::vec3(20, 20, 0));
-    test->build_points_from_bezier();
+
+    // TestObject* test2 = new TestObject();
+    
+    // test2->start_bezier_path(glm::vec3(20, -20, 0));
+    // test2->add_line_to(glm::vec3(10, 10, 0));
+    // test2->add_line_to(glm::vec3(-10, -30, 0));
+    
+    // test2->start_bezier_path(glm::vec3(30, 30, 0));
+    // test2->add_line_to(glm::vec3(-30, 30, 0));
+    // test2->build_points_from_bezier();
+    // test2->setColor({GraphColor(1, 0, 0), GraphColor(0, 1, 0), GraphColor(0, 0, 1)});
     
     
-    graph->play(test);
-    graph->play(title);
-    graph->play(circ);
+    // test->setStrokeWidth(1.5f);
+    // test2->setStrokeWidth(1.5f);
+    
+    // graph->play(test);
+    // graph->play(test2);
+    
+    // graph->play(rect);
+    // new Transition(rect, circ, 5, 5.0f);
+    // new Transition(test, test2, 5, 5.0f);
+    
+    // Text* text = new Text("SHUVO DEV", -50, 20, 16.0f);
+    // text->setStrokeWidth(0.0f);
+    // graph->play(text);
+    
+    // new ShowCreation(circ, 0, 5.0f);
+    // (new ShowCreation(text, 1.0f, 5.0f))->anim_timing_func = AnimationTimmingFunction::linearProgress;
+    // new ShowFillCreation(circ, 1, 3.0f);
 
     graph->run();
 }

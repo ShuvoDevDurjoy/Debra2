@@ -402,4 +402,4 @@ void ThreeDObject::applyUpdaterFunction(float dt){}
 void ThreeDObject::updateStrokePoints() {}
 void ThreeDObject::updateFillPoints() {}
 
-void ThreeDObject::interpolate(int number){}
+void ThreeDObject::interpolate(const GraphMathObject *target, float t){}
