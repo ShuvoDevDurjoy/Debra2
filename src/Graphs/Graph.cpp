@@ -158,14 +158,38 @@ void Graph::draw(float tick)
 {
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    
     try
     {
+        // --- Pass 0: Logic Update ---
+        // Baking transformations, subdividing curves, etc.
         for (GraphMathObject *graph : graphs)
         {
             graph->update(tick);
         }
 
         AnimationManager::Run(tick);
+
+        // --- Pass 1: Fill Pass ---
+        // Draw all fills first. Using stencil-and-winding for GraphObjects.
+        // We set global state once here.
+        glEnable(GL_DEPTH_TEST);
+        glDepthMask(GL_TRUE);
+        glDepthFunc(GL_LEQUAL); 
+
+        for (GraphMathObject *graph : graphs)
+        {
+            graph->updateFill(tick);
+        }
+
+        // --- Pass 2: Stroke Pass ---
+        // Draw all strokes on top. 
+        // We use a small depth offset/bias or just disable depth to ensure outlines are visible.
+        // For text characters (GraphGroup), they will recursively draw their components.
+        for (GraphMathObject *graph : graphs)
+        {
+            graph->updateStroke(tick);
+        }
         
         drawText(0); // Draw all added text
     }

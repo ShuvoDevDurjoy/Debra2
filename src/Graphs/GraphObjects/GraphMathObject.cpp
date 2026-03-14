@@ -30,9 +30,14 @@ void GraphMathObject::setStrokeOpacity(float stroke_opacity)
     this->stroke_opacity = stroke_opacity;
 }
 
-void GraphMathObject::setStrokeWidth(float stroke_width)
+void GraphMathObject::setStrokeWidth(float stroke_width, bool to_sub_graphs)
 {
-    this->line_width = stroke_width * 0.5f;
+    this->line_width = stroke_width;
+    if (to_sub_graphs) {
+        for (auto subObj : subGraphObjects) {
+            subObj->setStrokeWidth(stroke_width, true);
+        }
+    }
 }
 
 void GraphMathObject::setScale(glm::vec3 scale_factor)

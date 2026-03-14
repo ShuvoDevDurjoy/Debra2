@@ -8,10 +8,11 @@ uniform mat4 view;
 uniform mat4 projection;
 uniform mat4 model;
 uniform float u_line_width;
+uniform vec2 uViewportSize;
 uniform int vertexCount;
 uniform int u_layer;
 uniform float uMiterLimit = 2.0;
-uniform int uStrokeJoinStyle = 0;  // 0=MITER, 1=BEVEL, 2=ROUND
+uniform int uStrokeJoinStyle = 0;  // 0=MITER, 1=BEVAL, 2=ROUND
 
 out vec2 perpControl;
 out vec2 prepStart;
@@ -40,50 +41,11 @@ vec3 norm3(vec3 v){
     return v / len;
 }
 
-const float CURVE_THRESHOLD = radians(11.5); // good default
-
-
-vec3 pickOrthogonal(vec3 v)
-{
-    if(abs(v.x) < 0.0001 && abs(v.y) < 0.0001){
-        return vec3(1, 0, 0);
-    }
-    else if(abs(v.x) < 0.0001 && abs(v.z) < 0.0001){
-        return vec3(1, 0, 0);
-    }
-    else{
-        return vec3(0, 1, 0);
-    }
+vec2 norm2(vec2 v){
+    float len = length(v);
+    if(len < 1e-3) return vec2(0,0);
+    return v / len;
 }
-bool intersectSegments3D(
-    vec3 P0, vec3 P1,
-    vec3 Q0, vec3 Q1,
-    out vec3 I
-) {
-    vec3 U = P1 - P0;
-    vec3 V = Q1 - Q0;
-    vec3 W0 = P0 - Q0;
-
-    vec3 N = cross(U, V);
-    float denom = dot(N, N);
-
-    // Parallel
-    if (denom < 1e-6) return false;
-
-    // Not coplanar
-    if (abs(dot(W0, N)) > 1e-6) return false;
-
-    float t = dot(cross(W0, V), N) / denom;
-    float s = dot(cross(W0, U), N) / denom;
-
-    if (t < 0.0 || t > 1.0 || s < 0.0 || s > 1.0)
-        return false;
-
-    I = P0 + t * U;
-    return true;
-}
-
-
 
 void main()
 {
@@ -93,236 +55,109 @@ void main()
     float nextProg = float(vId[1]) / float(vertexCount - 1);
     if(uProgress <= prevProg) return;
     progress = clamp((uProgress - prevProg)/(nextProg - prevProg), 0.0, 1.0);
-    float selfBias = float(vId[0]) * 1e-6;
-    float z_bias = float(u_layer + vId[0]) * 1e-6;
-
-    // Transform points: Operate completely in OBJECT SPACE!
-    vec3 P0 = gs_in[0].cp;
-    vec3 P1 = gs_in[1].cp;
-    vec3 PP = gs_in[0].pP;
-    vec3 NP = gs_in[1].nP;
-
-    bool isStart = length(P0 - PP) < 1e-5;
-    bool isEnd   = length(P1 - NP) < 1e-5;
-
-    // --- segment directions in Object Space ---
-    vec3 d1 = norm3(P1 - P0);
-    vec3 d0 = isStart ? d1 : norm3(P0 - PP);
-    vec3 d2 = isEnd   ? d1 : norm3(NP - P1);
-
-    // Flat Ribbon: Paper lies on the XY plane in Object space; its normal is (0,0,1)
-    vec3 planeN = vec3(0.0, 0.0, 1.0);
-
-    vec3 perp0 = norm3(cross(planeN, d0));
-    vec3 perp1 = norm3(cross(planeN, d1));
-    vec3 perp2 = norm3(cross(planeN, d2));
     
-    // Ensure perpendiculars are valid
-    if(length(perp0) < 1e-3) perp0 = perp1;
-    if(length(perp2) < 1e-3) perp2 = perp1;
+    mat4 pvm = projection * view * model;
 
-    vec3 miterStart = isStart ? perp1 : norm3(perp0 + perp1);
-    vec3 miterEnd   = isEnd   ? perp1 : norm3(perp1 + perp2);
-    
-    // Fallback for degenerate miters
-    if(isStart) miterStart = perp1;
-    if(isEnd) miterEnd = perp1;
+    // 1. Project points to Clip Space
+    vec4 P0_clip = pvm * vec4(gs_in[0].cp, 1.0);
+    vec4 P1_clip = pvm * vec4(gs_in[1].cp, 1.0);
+    vec4 PP_clip = pvm * vec4(gs_in[0].pP, 1.0);
+    vec4 NP_clip = pvm * vec4(gs_in[1].nP, 1.0);
 
-    float segLen = length(P1-P0);
+    // 2. To Pixel Space
+    vec2 P0_px = (P0_clip.xy / P0_clip.w * 0.5 + 0.5) * uViewportSize;
+    vec2 P1_px = (P1_clip.xy / P1_clip.w * 0.5 + 0.5) * uViewportSize;
     
-    // Use shader uniform for miter limit (industry-standard: 2.0-4.0)
-    float MITER_LIMIT = uMiterLimit; 
+    bool isStart = length(gs_in[0].cp - gs_in[0].pP) < 1e-5;
+    bool isEnd   = length(gs_in[1].cp - gs_in[1].nP) < 1e-5;
+
+    vec2 PP_px = isStart ? P0_px : (PP_clip.xy / PP_clip.w * 0.5 + 0.5) * uViewportSize;
+    vec2 NP_px = isEnd   ? P1_px : (NP_clip.xy / NP_clip.w * 0.5 + 0.5) * uViewportSize;
+
+    // 3. Directions in Pixel Space
+    vec2 d1 = norm2(P1_px - P0_px);
+    vec2 d0 = isStart ? d1 : norm2(P0_px - PP_px);
+    vec2 d2 = isEnd   ? d1 : norm2(NP_px - P1_px);
+
+    // 4. Perpendiculars (Rotated 90 deg)
+    vec2 perp0 = vec2(-d0.y, d0.x);
+    vec2 perp1 = vec2(-d1.y, d1.x);
+    vec2 perp2 = vec2(-d2.y, d2.x);
+
+    // 5. Miter logic in Pixel Space
+    vec2 miterStart = isStart ? perp1 : norm2(perp0 + perp1);
+    vec2 miterEnd   = isEnd   ? perp1 : norm2(perp1 + perp2);
     
-    // Calculate proper miter scale with clamping
     float miterScaleStart = isStart ? 1.0 : 1.0 / max(abs(dot(miterStart, perp1)), 0.25);
     float miterScaleEnd   = isEnd   ? 1.0 : 1.0 / max(abs(dot(miterEnd, perp1)), 0.25);
     
-    // Extra safety clamp
-    miterScaleStart = max(0.5, min(miterScaleStart, MITER_LIMIT));
-    miterScaleEnd = max(0.5, min(miterScaleEnd, MITER_LIMIT));
+    miterScaleStart = min(miterScaleStart, uMiterLimit);
+    miterScaleEnd   = min(miterScaleEnd,   uMiterLimit);
 
     float halfW = u_line_width * 0.5;
-    float lengthStart = halfW * miterScaleStart;
-    float lengthEnd = halfW * miterScaleEnd;
-
-    float ratio = lengthStart / lengthEnd;
-
-    float safetyCap = 0.5;
-
-    // lengthStart = min(lengthStart, miterLimit);
-    // lengthEnd = min(lengthEnd, miterLimit);
-
-    float epsilon = 0.1;
-    vec3 offsetStart = miterStart * lengthStart ;
-    vec3 offsetEnd   = miterEnd   * lengthEnd;
-
     
-    float rad = radians(30.0);
-
-    // --- Compute Bezier control based on corner curvature ---
-    float anglePrev = acos(clamp(dot(d0,d1), 0, 1.0));
-    float angleNext = acos(clamp(dot(d1,d2), 0, 1.0));
-    float signPrev = sign(dot(cross(d1,d0), planeN));
-    float signNext = sign(dot(cross(d2,d1), planeN));
-
-    anglePrev *= signPrev;
-    angleNext *= signNext;
-
-    // Average corner effect
-    float theta = 0.5 * (anglePrev + angleNext);
-    // float maxTheta = radians(120.0);
-    // theta = clamp(theta, -maxTheta, maxTheta);
-
-    // if(segLen <= stroke_width * 2) return;
-    float controlY = 0.01;
-    // float controlY = 0.01;
+    // 6. Bezier Control Points in Pixel Space (to support smooth curves at corners)
+    // We reuse the theta logic but in 2D pixel space
+    float anglePrev = acos(clamp(dot(d0, d1), -1.0, 1.0));
+    float angleNext = acos(clamp(dot(d1, d2), -1.0, 1.0));
+    float signPrev = sign(d0.x * d1.y - d0.y * d1.x); // 2D cross product sign
+    float signNext = sign(d1.x * d2.y - d1.y * d2.x);
     
-    // Industry-standard sharp corner detection
-    // Use stricter threshold for sharper corners
-    const float SHARP_CORNER_THRESHOLD = radians(11.5); // 25 degree threshold
-    bool useBezier = abs(theta) < SHARP_CORNER_THRESHOLD;
-
-    float tPrev = tan(anglePrev * 0.5);
-    float tNext = tan(angleNext * 0.5);
+    float theta = (0.5 * (anglePrev * signPrev + angleNext * signNext));
+    float segLen = length(P1_px - P0_px);
     
-    float totalBend = abs(tPrev) + abs(tNext);
-    float bias = 0.5; // default center
-    
-    // Improved bias calculation that handles sharp corners better
-    if(totalBend > 0.01) {
-        bias = clamp(0.5 + 0.5 * (tNext - tPrev) / totalBend, 0.1, 0.9);
-    }
+    float controlY = 0.0;
     float controlX = segLen * 0.5;
-
-    /*
-    if(abs(theta) <= radians(80.0)) {
-        float rawY = tan(theta * 0.5) * u_line_width * 1.5; // scale by line width, not segLen
-        controlY = clamp(rawY, -u_line_width*2.0, u_line_width*2.0); // safe cap
-        // Bias keeps curve centered
-        float totalBend = abs(tan(anglePrev*0.5)) + abs(tan(angleNext*0.5));
-        float bias = 0.5;
-        if(totalBend > 0.01) {
-            bias = clamp(0.5 + 0.5*(tan(angleNext*0.5) - tan(anglePrev*0.5))/totalBend, 0.1, 0.9);
-        }
-        controlX = segLen * bias;
-        } else {
-        // Very sharp corners → almost straight line
-        controlY = sign(theta) * 0.5 * u_line_width; 
-        controlX = segLen * 0.5;
-        }
-
-    */
-
     
-    // For sharp corners, use minimal bezier curve or straight line segment
-    if(user_bezier_always == 1.0) {
-        if(abs(theta) <= radians(45.0)) {
-            float rawY = tan(theta * 0.5) * u_line_width * 0.5;
-            controlY = clamp(rawY, -u_line_width * 0.5, u_line_width * 0.5);
-            // controlY = tan(theta * 0.5) * u_line_width * 0.5;
-            float totalBend = abs(tan(anglePrev*0.5)) + abs(tan(angleNext*0.5));
-            float bias = 0.5;
-            if(totalBend > 0.01) {
-                bias = clamp(0.5 + 0.5*(tan(angleNext*0.5) - tan(anglePrev*0.5))/totalBend, 0.1, 0.9);
-            }
-            controlX = segLen * bias;
-        } else {
-            // Very sharp corner: minimize curve
-            controlY = sign(theta) * 0.05 * u_line_width;
-            controlX = segLen * 0.5;
-        }
-    } else if(useBezier && !isStart && !isEnd) {
+    const float SHARP_CORNER_THRESHOLD = radians(11.5);
+    if(abs(theta) < SHARP_CORNER_THRESHOLD && !isStart && !isEnd) {
         controlY = tan(theta * 0.5) * segLen * 0.6;
-        // Clamp controlY to line width limits to avoid extreme curves
-        float maxY = u_line_width * 2.0;   // maximum allowed offset
-        // Removing `minY` to allow nearly flat lines to evaluate perfectly straight!
-        controlY = clamp(controlY, -maxY, maxY);
-        controlX = segLen * bias;
-    } else if(abs(theta) > radians(45.0) && !isStart && !isEnd) {
-        // Ultra-sharp corner: use bevel instead of curve
-        controlY = 0.0;
-        controlX = segLen * 0.5;
+        controlY = clamp(controlY, -halfW * 2.0, halfW * 2.0);
     }
 
     perpControl = vec2(controlX, controlY);
-
-    prepStart = vec2(0.0,0.0);
-    prevEnd = vec2(segLen,0.0);
+    prepStart = vec2(0.0, 0.0);
+    prevEnd = vec2(segLen, 0.0);
     stroke_width = halfW;
 
-    // --- Expand quad to cover curve at corners (industry-standard approach) ---
-    // The expansion must be sufficient to cover the bezier curve
-    float safeControlY = clamp(abs(controlY), 0.0, halfW * 3.0);
+    // 7. Expansion
+    float expand = 1.0 + clamp(abs(controlY) / (halfW * 2.0), 0.0, 0.5);
+    vec2 offsetStart = miterStart * (halfW * miterScaleStart * expand);
+    vec2 offsetEnd   = miterEnd   * (halfW * miterScaleEnd   * expand);
+
+    vec2 p0_px = P0_px - offsetStart;
+    vec2 p1_px = P0_px + offsetStart;
+    vec2 p2_px = P1_px - offsetEnd;
+    vec2 p3_px = P1_px + offsetEnd;
+
+    vec2 local;
     
-    // Calculate expansion based on bezier control point offset
-    // Smoother, more conservative expansion to avoid artifacts
-    float expand = 1.0;
-    if(abs(controlY) > 0.05) {
-        // Only expand for meaningful curves
-        expand = 1.0 + clamp(abs(controlY) / (halfW * 2.0), 0.0, 0.6);
-    }
-    
-    // For very tight curves, minimize expansion to reduce artifacts
-    if(abs(theta) > radians(40.0)) {
-        expand = min(expand, 1.2);  // Limit expansion at sharp corners
-    }
-    
-    // Overall cap to prevent excessive vertex displacement
-    expand = min(expand, 1.5);
-
-    vec3 p0 = P0 - offsetStart * expand ;
-    vec3 p1 = P0 + offsetStart * expand;
-    vec3 p2 = P1 - offsetEnd * expand;
-    vec3 p3 = P1 + offsetEnd * expand;
-
-    vec3 I;
-    if(intersectSegments3D(P0, p0, P1, p2, I)){
-        vec3 temp = p0;
-        p0 = p2;
-        p2 = temp;
-    }
-    if(intersectSegments3D(P0, p1, P1, p3, I)){
-        vec3 temp = p1;
-        p1 = p3;
-        p3 = temp;
-    }
-
-    // vec3 center_min_top = 
-
-    // --- Local 2D basis ---
-    vec3 T = d1;
-    vec3 N = perp1;
-    vec3 origin = P0;
-
-    // Since p0..p3 are in Object Space, we multiply by projection * view * model
-    mat4 pvm = projection * view * model;
-
-    vec3 local = p0-origin;
-    pCurrent = vec2(dot(local,T), dot(local,N));
+    // p0
+    local = p0_px - P0_px;
+    pCurrent = vec2(dot(local, d1), dot(local, perp1));
     pProgress = 0.0; outColor = gs_in[0].color;
-    vec4 clip = pvm * vec4(p0, 1.0); 
-    gl_Position = clip;
+    gl_Position = vec4(((p0_px / uViewportSize - 0.5) * 2.0) * P0_clip.w, P0_clip.z, P0_clip.w);
     EmitVertex();
 
-    local = p1-origin;
-    pCurrent = vec2(dot(local,T), dot(local,N));
+    // p1
+    local = p1_px - P0_px;
+    pCurrent = vec2(dot(local, d1), dot(local, perp1));
     pProgress = 0.0; outColor = gs_in[0].color;
-    clip = pvm * vec4(p1, 1.0); 
-    gl_Position = clip;
+    gl_Position = vec4(((p1_px / uViewportSize - 0.5) * 2.0) * P0_clip.w, P0_clip.z, P0_clip.w);
     EmitVertex();
 
-    local = p2-origin;
-    pCurrent = vec2(dot(local,T), dot(local,N));
+    // p2
+    local = p2_px - P0_px;
+    pCurrent = vec2(dot(local, d1), dot(local, perp1));
     pProgress = 1.0; outColor = gs_in[1].color;
-    clip = pvm * vec4(p2, 1.0);
-    gl_Position = clip; 
+    gl_Position = vec4(((p2_px / uViewportSize - 0.5) * 2.0) * P1_clip.w, P1_clip.z, P1_clip.w);
     EmitVertex();
 
-    local = p3-origin;
-    pCurrent = vec2(dot(local,T), dot(local,N));
+    // p3
+    local = p3_px - P0_px;
+    pCurrent = vec2(dot(local, d1), dot(local, perp1));
     pProgress = 1.0; outColor = gs_in[1].color;
-    clip = pvm * vec4(p3, 1.0); 
-    gl_Position = clip;
+    gl_Position = vec4(((p3_px / uViewportSize - 0.5) * 2.0) * P1_clip.w, P1_clip.z, P1_clip.w);
     EmitVertex();
 
     EndPrimitive();

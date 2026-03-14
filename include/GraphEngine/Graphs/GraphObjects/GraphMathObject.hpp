@@ -32,7 +32,7 @@ public:
 class GraphMathObject
 {
 public:
-    Shader *stroke_shader, *fill_shader;
+    Shader *stroke_shader = nullptr, *fill_shader = nullptr;
 
     glm::mat4 model = glm::mat4(1.0f), view, projection;
     glm::mat4 scale = glm::mat4(1.0f);
@@ -46,7 +46,9 @@ public:
 
     int layer = 0;
 
+    bool showStroke = true;
     bool showGraph = true;
+    bool showFill = false;
 
     // need to be changed to stroke_line_width
     float line_width = 3.0f;
@@ -157,7 +159,7 @@ public:
     void setStrokeProgress(float);
     void setFillOpacity(float);
     void setStrokeOpacity(float);
-    void setStrokeWidth(float);
+    void setStrokeWidth(float, bool to_sub_graphs = true);
     void setSubdivisions(int res) { bezier_subdivision_resolution = res; bezier_dirty = true; }
     void setSmooth(bool smooth = true) { is_smooth = smooth; bezier_dirty = true; }
     void moveTo(Position pos = Position::NONE);

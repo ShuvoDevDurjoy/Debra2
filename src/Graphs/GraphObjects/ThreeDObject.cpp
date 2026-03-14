@@ -308,93 +308,55 @@ void update(float dt) override;
 */
 
 void ThreeDObject::updateStroke(float dt){
-    GLboolean depthWasEnabled = glIsEnabled(GL_DEPTH_TEST);
+    if (stroke_shader) {
+        stroke_shader->use();
 
-    glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LESS);
+        stroke_shader->setMat4("model", model);
+        stroke_shader->setMat4("view", GraphApp::view);
+        stroke_shader->setMat4("projection", GraphApp::projection);
 
-    stroke_shader->use();
+        stroke_shader->setFloat("u_progress", fillProgress);
+        stroke_shader->setInt("triangle_count", getFillsize() / 3);
+        stroke_shader->setFloat("stroke_line_width", line_width);
+        stroke_shader->setInt("vertices_increment_count", ((resolution.first - 1) * 2));
 
-    projection = GraphApp::projection;
-    view = GraphApp::view;
+        glm::vec3 cameraPos = GraphApp::cameraPos;
 
-    model = glm::mat4(1.0f);
-    model = glm::rotate(model, glm::radians(GraphApp::rotX), glm::vec3(1, 0, 0));
-    model = glm::rotate(model, glm::radians(GraphApp::rotY), glm::vec3(0, 1, 0));
+        stroke_shader->setVec3("objectColor", 1, 0.67, 0.67);
+        stroke_shader->setVec3("lightPos", cameraPos);
+        stroke_shader->setVec3("viewPos", cameraPos);
+        stroke_shader->setVec3("lightColor", 0.5, 0.5, 0.5);
 
-    stroke_shader->setMat4("model", model);
-    stroke_shader->setMat4("view", view);
-    stroke_shader->setMat4("projection", projection);
-
-    stroke_shader->setFloat("u_progress", fillProgress);
-    stroke_shader->setInt("triangle_count", getFillsize() / 3);
-
-    stroke_shader->setFloat("stroke_line_width", line_width);
-
-    stroke_shader->setInt("vertices_increment_count", ((resolution.first - 1) * 2));
-
-    glm::vec3 cameraPos(0.0f, 0.0f, 100.0f);
-
-    stroke_shader->setVec3("objectColor", 1, 0.67, 0.67);
-    stroke_shader->setVec3("lightPos", cameraPos);
-    stroke_shader->setVec3("viewPos", cameraPos);
-    stroke_shader->setVec3("lightColor", 0.5, 0.5, 0.5);
-
-    glBindVertexArray(StrokeVAO);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-    glDrawArrays(GL_TRIANGLES, 0, getFillsize());
-
-    // --- Restore previous depth state ---
-    if (!depthWasEnabled)
-        glDisable(GL_DEPTH_TEST);
+        glBindVertexArray(StrokeVAO);
+        glDrawArrays(GL_TRIANGLES, 0, getFillsize());
+    }
 }
 
 void ThreeDObject::updateFill(float dt){
-    // --- Save previous depth state ---
-    GLboolean depthWasEnabled = glIsEnabled(GL_DEPTH_TEST);
+    if (showFill && fill_shader) {
+        fill_shader->use();
 
-    glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LESS);
+        fill_shader->setMat4("model", model);
+        fill_shader->setMat4("view", GraphApp::view);
+        fill_shader->setMat4("projection", GraphApp::projection);
 
-    fill_shader->use();
+        fill_shader->setFloat("u_progress", fillProgress);
+        fill_shader->setInt("triangle_count", getFillsize() / 3);
+        fill_shader->setFloat("stroke_line_width", line_width);
+        fill_shader->setInt("vertices_increment_count", ((resolution.first - 1) * 2));
 
-    projection = GraphApp::projection;
-    view = GraphApp::view;
+        glm::vec3 cameraPos = GraphApp::cameraPos;
 
-    model = glm::mat4(1.0f);
-    model = glm::rotate(model, glm::radians(GraphApp::rotX), glm::vec3(1, 0, 0));
-    model = glm::rotate(model, glm::radians(GraphApp::rotY), glm::vec3(0, 1, 0));
+        fill_shader->setVec3("objectColor", 1, 0.67, 0.67);
+        fill_shader->setVec3("lightPos", cameraPos);
+        fill_shader->setVec3("viewPos", cameraPos);
+        fill_shader->setVec3("lightColor", 0.5, 0.5, 0.5);
 
-    fill_shader->setMat4("model", model);
-    fill_shader->setMat4("view", view);
-    fill_shader->setMat4("projection", projection);
-
-    fill_shader->setFloat("u_progress", fillProgress);
-    fill_shader->setInt("triangle_count", getFillsize() / 3);
-    fill_shader->setFloat("stroke_line_width", line_width);
-
-    fill_shader->setInt("vertices_increment_count", ((resolution.first - 1) * 2));
-
-    glm::vec3 cameraPos(0.0f, 0.0f, 100.0f);
-
-    fill_shader->setVec3("objectColor", 1, 0.67, 0.67);
-    fill_shader->setVec3("lightPos", cameraPos);
-    fill_shader->setVec3("viewPos", cameraPos);
-    fill_shader->setVec3("lightColor", 0.5, 0.5, 0.5);
-
-    glBindVertexArray(FillVAO);
-    glDrawArrays(GL_TRIANGLES, 0, getFillsize());
-
-    // --- Restore previous depth state ---
-    if (!depthWasEnabled)
-        glDisable(GL_DEPTH_TEST);
+        glBindVertexArray(FillVAO);
+        glDrawArrays(GL_TRIANGLES, 0, getFillsize());
+    }
 }
 void ThreeDObject::update(float dt){
-    if(showFill)
-        updateFill(dt);
-    updateStroke(dt);
 }
 
 void ThreeDObject::applyUpdaterFunction(float dt){}

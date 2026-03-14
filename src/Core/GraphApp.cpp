@@ -7,6 +7,8 @@ glm::vec3 GraphApp::cameraPos;
 glm::vec3 GraphApp::camera_center = glm::vec3(0, 0, 0);
 float GraphApp::lastX = 0, GraphApp::lastY = 0, GraphApp::rotX = 0, GraphApp::rotY = 0;
 int GraphApp::drawCount = 0;
+int GraphApp::window_width = 1200;
+int GraphApp::window_height = 600;
 
 GraphApp::GraphApp()
 {
@@ -32,12 +34,9 @@ int GraphApp::InitWindow()
     // initialize glfw
     glfwInit();
 
-    // glEnable(GL_MULTISAMPLE);
-
-    // #ifdef _WIN32
-    // Enable MSAA (multi-sample anti-aliasing) only on Windows
-    // glfwWindowHint(GLFW_SAMPLES, 4);
-// #endif
+    // Enable MSAA
+    glfwWindowHint(GLFW_SAMPLES, 4);
+    
     // define window hints
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -93,9 +92,7 @@ int GraphApp::loadGLAD()
         return -1;
     }
 
-#ifdef _WIN32
     glEnable(GL_MULTISAMPLE);
-#endif
     return 0;
 }
 
@@ -116,6 +113,8 @@ void GraphApp::InitTextRenderer()
 void GraphApp::frame_buffer_size_callback(GLFWwindow *window, int w, int h)
 {
     glViewport(0, 0, w, h);
+    window_width = w;
+    window_height = h;
 }
 
 void GraphApp::mouseMoveCallback(GLFWwindow *window, double xpos, double ypos)

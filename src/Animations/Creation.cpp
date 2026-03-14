@@ -6,7 +6,7 @@ void ShowCreation::Init()
     if (!targetObject->subGraphObjects.empty())
     {
         //how many sub object is in
-        float buffer = 0.9f;
+        float buffer = 0.5f;
         int count = targetObject->subGraphObjects.size();
         float segment_duration = duration / count;
         float ds = (1.0f - buffer) * segment_duration;
@@ -14,7 +14,7 @@ void ShowCreation::Init()
         int index = 0;
         this->targetObject->showGraph = false;
 
-        for (auto *sub : targetObject->subGraphObjects)
+        for (GraphMathObject *sub : targetObject->subGraphObjects)
         {
             sub->showGraph = false;
             (new ShowCreation(sub, start_time + index * ds, dt))->anim_timing_func = this->anim_timing_func;
@@ -42,6 +42,7 @@ void ShowCreation::play(float dt)
         return;
     }
 
+    
     float prg = (anim_timing_func((dt - start_time), duration));
     targetObject->showGraph = true;
     targetObject->setStrokeProgress(prg < 0 ? 0 : prg);

@@ -67,9 +67,6 @@ layout(triangle_strip, max_vertices = 3) out;
 
 uniform float uProgress;    // global progress 0.0 → 1.0
 uniform int vertexCount;    // total number of vertices
-uniform mat4 model;
-uniform mat4 view;
-uniform mat4 projection;
 
 out float pProgress;
 out float triProgress;
@@ -80,20 +77,16 @@ flat out int vertexId;
 
 flat in int triangleId[];   // triangle ID from vertex shader
 
-// Linear interpolation helper
-vec3 lerp(vec3 a, vec3 b, float t) {
-    return a + t * (b - a);
-}
-
 void main() {
     if (uProgress <= 0.0) return;
 
-    // Triangle vertices
-    vec3 p0 = gl_in[0].gl_Position.xyz;
-    vec3 p1 = gl_in[1].gl_Position.xyz;
-    vec3 p2 = gl_in[2].gl_Position.xyz;
+    // Triangle vertices (already in clip space from vertex shader)
+    vec4 p0 = gl_in[0].gl_Position;
+    vec4 p1 = gl_in[1].gl_Position;
+    vec4 p2 = gl_in[2].gl_Position;
 
-    Normal = normalize(cross(p1 - p0, p2 - p0));
+    // Compute normal in view space using .xyz (perspective-divided approximation)
+    Normal = normalize(cross(p1.xyz - p0.xyz, p2.xyz - p0.xyz));
 
     // Determine total triangles
     float totalTriangles = float(vertexCount) / 3.0;
@@ -108,24 +101,20 @@ void main() {
     // If this triangle hasn't started yet, skip
     if (triProgress <= 0.0) return;
 
-    // Optional: interpolate triangle vertices to animate growth (can be commented out)
-    vec3 ip0 = p0;
-    vec3 ip1 = p1;
-    vec3 ip2 = p2;
-    // Emit triangle
-    FragPos = ip0;
-    pProgress = 1;
-    gl_Position = projection * view * model * vec4(ip0, 1.0);
+    // Emit triangle vertices (already transformed)
+    FragPos = p0.xyz;
+    pProgress = 0.0;
+    gl_Position = p0;
     EmitVertex();
 
-    FragPos = ip1;
-    pProgress = 0;
-    gl_Position = projection * view * model * vec4(ip1, 1.0);
+    FragPos = p1.xyz;
+    pProgress = 0.0;
+    gl_Position = p1;
     EmitVertex();
 
-    FragPos = ip2;
-    pProgress = 1;
-    gl_Position = projection * view * model * vec4(ip2, 1.0);
+    FragPos = p2.xyz;
+    pProgress = 0.0;
+    gl_Position = p2;
     EmitVertex();
 
     EndPrimitive();

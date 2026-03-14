@@ -1,0 +1,33 @@
+#ifndef __RECTANGLE_SHAPE_HPP__
+#define __RECTANGLE_SHAPE_HPP__
+
+#include "../GraphObject.hpp"
+
+class Rectangle : public GraphObject
+{
+public:
+    Rectangle(float width, float height, float x = 0, float y = 0)
+    {
+        float h_w = width * 0.5f;
+        float h_h = height * 0.5f;
+
+        start_bezier_path(glm::vec3(x - h_w, y + h_h, 0));
+        add_line_to(glm::vec3(x + h_w, y + h_h, 0));
+        add_line_to(glm::vec3(x + h_w, y - h_h, 0));
+        add_line_to(glm::vec3(x - h_w, y - h_h, 0));
+        add_line_to(glm::vec3(x - h_w, y + h_h, 0));
+
+        setDimension(x - h_w, x + h_w, y - h_h, y + h_h);
+        close_path();
+        build_points_from_bezier();
+    }
+};
+
+class Square : public Rectangle
+{
+public:
+    Square(float side = 5.0f, float cx = 0.0f, float cy = 0.0f)
+        : Rectangle(side, side, cx, cy) {}
+};
+
+#endif

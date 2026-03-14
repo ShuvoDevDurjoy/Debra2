@@ -40,6 +40,7 @@ public:
     //specific to this class
     GLuint StrokeVAO, StrokeVBO;
     GLuint FillVAO, FillVBO;
+    GLuint CoverVAO, CoverVBO;
 
     bool stroke_data_initialized = false;
     bool fill_data_initialized = false;
@@ -64,8 +65,6 @@ public:
     std::string stencilFragPath = "./shaders/stencil_fill/stencil_pass.fs";
     std::string coverFragPath = "./shaders/stencil_fill/cover_pass.fs";
 
-    Shader *stencil_shader = nullptr;
-    Shader *cover_shader = nullptr;
 
     std::vector<GraphColor> colors;
     std::vector<GraphColor> stroke_colors;
@@ -77,17 +76,17 @@ public:
     std::vector<glm::vec3> stroke_color_array;
 
     // contains points to draw the fill
-    std::vector<float> prev_fill_points;
     std::vector<glm::vec3> current_fill_points;
     std::vector<uint32_t> fillvertices;
-    std::vector<float> next_fill_points;
-    std::vector<float> fill_color_array;
 
     // contains sub graph of one graph
     std::vector<float> updateStartTime;
     std::vector<float> updateEndTime;
 
     std::vector<int> sub_path_start_indices;
+
+    Shader *stencil_shader = nullptr;
+    Shader *cover_shader = nullptr;
 
 protected:
     void update(float dt) override;
@@ -145,7 +144,6 @@ public:
 
     void add(GraphMathObject *sub_object) override
     {
-        static_cast<GraphObject*>(sub_object)->setColor(this->colors); 
         subGraphObjects.push_back(sub_object );
     }
 
@@ -213,5 +211,6 @@ public:
     glm::vec3 getRelativePosition(glm::vec3 targetPosition, Position pos, glm::vec3 buffer = glm::vec3(0, 0, 0));
     void nextTo(GraphObject *target, Position pos = Position::NONE, float buffer = 0.0f);
 };
+
 
 #endif

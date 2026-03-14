@@ -56,6 +56,7 @@ void Transition::play(float dt)
     if (!is_initialized)
     {
         morphObject->showGraph = false;
+        morphObject->showFill = false;
         std::cout << "Initializing Transition Animation" << std::endl;
         Init();
     }

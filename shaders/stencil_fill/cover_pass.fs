@@ -13,5 +13,5 @@ void main() {
     // For now, we'll use a simple threshold or just scale opacity.
     if (u_fill_progress < 0.01) discard;
     
-    FragColor = vec4(u_fill_color, alpha * u_fill_progress);
+    FragColor = vec4(1,0,0, alpha * u_fill_progress);
 }

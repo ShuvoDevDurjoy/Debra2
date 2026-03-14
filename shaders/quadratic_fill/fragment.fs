@@ -57,5 +57,5 @@ void main()
 
     // ---- Final color ----
     vec3 result = (ambient + diffuse + specular) * (objectColor);
-    FragColor = vec4(objectColor,fillOpacity);
+    FragColor = vec4(1,0,0,fillOpacity);
 }

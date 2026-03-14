@@ -26,8 +26,9 @@ class Graph;
 class GraphApp : public MouseEvents, public KeyClicked
 {
 private:
-    int window_width = 1200;
-    int window_height = 600;
+public:
+    static int window_width;
+    static int window_height;
     std::string vertex_shader_file = VERTEX_SHADER_FILE_NAME;
     std::string fragment_shader_file = FRAGMENT_SHADER_FILE_NAME;
     GLuint VBO, VAO;

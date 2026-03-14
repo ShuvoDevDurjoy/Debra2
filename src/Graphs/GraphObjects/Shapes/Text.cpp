@@ -58,7 +58,6 @@ Char::Char(char c, float x, float y, float scale) {
     this->adaptive_max_depth = 10;
     this->adaptive_min_distance = 0.0001f;
     generateBezierOutline(c, x, y, scale);
-    setStrokeWidth(0.2f);
 }
 
 void Char::generateBezierOutline(char c, float x, float y, float scale) {
@@ -101,7 +100,7 @@ void Char::generateBezierOutline(char c, float x, float y, float scale) {
 
     FT_Done_Face(face);
     FT_Done_FreeType(ft);
-
+    close_path();
     build_points_from_bezier();
 
     // Update the bounding box for this character in world units
@@ -136,7 +135,7 @@ Text::Text(const std::string& textStr, float x, float y, float scale) {
             continue;
         }
         Char* ch = new Char(c, pen_x, y, scale);
-        ch->setStrokeWidth(0.5f);
+        ch->setStrokeWidth(1.0f);
         add(ch);
 
         if (!FT_Load_Char(face, c, FT_LOAD_NO_BITMAP)) {
