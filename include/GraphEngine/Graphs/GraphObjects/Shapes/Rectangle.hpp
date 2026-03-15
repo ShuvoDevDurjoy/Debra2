@@ -19,7 +19,6 @@ public:
 
         setDimension(x - h_w, x + h_w, y - h_h, y + h_h);
         close_path();
-        build_points_from_bezier();
     }
 };
 

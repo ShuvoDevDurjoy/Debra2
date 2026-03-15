@@ -77,13 +77,23 @@ flat out int vertexId;
 
 flat in int triangleId[];   // triangle ID from vertex shader
 
+uniform int u_layer;
+
 void main() {
     if (uProgress <= 0.0) return;
+
+    // Apply a tiny Z-offset based on layer
+    float zBias = float(u_layer) * 0.001; 
 
     // Triangle vertices (already in clip space from vertex shader)
     vec4 p0 = gl_in[0].gl_Position;
     vec4 p1 = gl_in[1].gl_Position;
     vec4 p2 = gl_in[2].gl_Position;
+
+    // ... (rest of the logic)
+    p0.z -= zBias * p0.w;
+    p1.z -= zBias * p1.w;
+    p2.z -= zBias * p2.w;
 
     // Compute normal in view space using .xyz (perspective-divided approximation)
     Normal = normalize(cross(p1.xyz - p0.xyz, p2.xyz - p0.xyz));

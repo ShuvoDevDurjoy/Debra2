@@ -1,6 +1,7 @@
 #include "GraphEngine/Graphs/Graph.hpp"
 #include "GraphEngine/Graphs/GraphObjects/ThreeDAxes.hpp"
 #include "GraphEngine/Graphs/GraphObjects/Shapes/Circle.hpp"
+#include "GraphEngine/Graphs/GraphObjects/Shapes/Rectangle.hpp"
 #include "GraphEngine/Animations/Transition.hpp"
 
 int main()

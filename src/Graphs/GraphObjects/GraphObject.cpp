@@ -105,14 +105,13 @@ void GraphObject::updateStroke(float dt)
         }
 
         for (GraphMathObject *subObj : subGraphObjects)
-    {
-        subObj->updateStroke(dt);
-    }
+        {
+            subObj->updateStroke(dt);
+        }
 
         // if (!depthWasEnabled)
         //     glDisable(GL_DEPTH_TEST);
     }
-
 }
 
 void GraphObject::updateFill(float dt)
@@ -212,6 +211,9 @@ void GraphObject::updateFill(float dt)
 void GraphObject::Init(float s_time)
 {
 
+    if(is_initialized)
+        return;
+
     layer = s_time;
 
     if (!stroke_shader)
@@ -232,17 +234,17 @@ void GraphObject::Init(float s_time)
         glGenVertexArrays(1, &FillVAO);
         glGenBuffers(1, &FillVBO);
     }
-        // Initialize OpenGL Buffer and Array
-        glGenVertexArrays(1, &StrokeVAO);
-        glGenBuffers(1, &StrokeVBO);
+    // Initialize OpenGL Buffer and Array
+    glGenVertexArrays(1, &StrokeVAO);
+    glGenBuffers(1, &StrokeVBO);
 
-        // initialize the stroke data
-        InitStrokeData();
-        resolution = getSize() - 1;
-        // InitFillData();
+    // initialize the stroke data
+    InitStrokeData();
+    resolution = getSize() - 1;
+    // InitFillData();
 
-        drawSize = getSize();
-        drawStart = 0;
+    drawSize = getSize();
+    drawStart = 0;
 
     InitSubObject(s_time);
 
@@ -251,6 +253,13 @@ void GraphObject::Init(float s_time)
 
 void GraphObject::InitStrokeData()
 {
+    if(is_initialized)
+        return;
+    if (is_bezier_path && bezier_dirty)
+    {
+        build_points_from_bezier();
+    }
+
     setStrokeData();
     applyColorToVertex();
     glBindVertexArray(StrokeVAO);
@@ -289,22 +298,17 @@ void GraphObject::InitSubObject(float s_time)
     }
 }
 
-inline void showPoints(std::vector<glm::vec3> pts)
-{
-    for (auto p : pts)
-    {
-        std::cout << "(" << p.x << "," << p.y << "," << p.z << ") ";
-    }
-    std::cout << std::endl;
-}
+// inline void showPoints(std::vector<glm::vec3> pts)
+// {
+//     for (auto p : pts)
+//     {
+//         std::cout << "(" << p.x << "," << p.y << "," << p.z << ") ";
+//     }
+//     std::cout << std::endl;
+// }
 
 void GraphObject::setStrokeData()
 {
-    if (is_bezier_path && bezier_dirty)
-    {
-        build_points_from_bezier();
-    }
-
     if (points.empty())
         return;
 
@@ -325,25 +329,45 @@ void GraphObject::setStrokeData()
         int count = range.second;
         int end = start + count - 1;
 
+        bool isClosed = false;
+        if (count > 2 && isEqual(points[start], points[end]))
+        {
+            isClosed = true;
+        }
+
         for (int i = start; i <= end; ++i)
         {
             // 1. Current Point
             stroke_current_points.push_back(points[i]);
 
-            // 2. Previous Point: If at start of sub-path, prev = self
+            // 2. Previous Point: If at start of sub-path, and closed, wrap around to point before end
             if (i == start)
             {
-                stroke_prev_points.push_back(points[i]);
+                if (isClosed)
+                {
+                    stroke_prev_points.push_back(points[end - 1]);
+                }
+                else
+                {
+                    stroke_prev_points.push_back(points[i]);
+                }
             }
             else
             {
                 stroke_prev_points.push_back(points[i - 1]);
             }
 
-            // 3. Next Point: If at end of sub-path, next = self
+            // 3. Next Point: If at end of sub-path, and closed, wrap around to point after start
             if (i == end)
             {
-                stroke_next_points.push_back(points[i]);
+                if (isClosed)
+                {
+                    stroke_next_points.push_back(points[start + 1]);
+                }
+                else
+                {
+                    stroke_next_points.push_back(points[i]);
+                }
             }
             else
             {
@@ -780,7 +804,7 @@ void GraphObject::updatePoints()
 {
 
     updateStrokePoints();
-    updateFillPoints();
+    // updateFillPoints();
 
     translate = glm::vec3(0);
     scale_x = scale_y = scale_z = 1.0f;
@@ -788,7 +812,7 @@ void GraphObject::updatePoints()
 
     setStrokeData();
     uploadStrokeDataToShader();
-    uploadFillDataToShader();
+    // uploadFillDataToShader();
 }
 
 void GraphObject::linearInterpolate(int number)
@@ -829,6 +853,67 @@ void GraphObject::linearInterpolate(int number)
     points.clear();
     points = dupPoints;
     resolution = interpolateNumber;
+}
+
+std::vector<glm::vec3> GraphObject::linearInterpolate(
+    const std::vector<glm::vec3> pts,
+    int interpolation_count)
+{
+    int point_size = pts.size();
+
+    // If already enough points, return original
+    if (point_size >= interpolation_count)
+        return pts;
+
+    // If only one point, duplicate it
+    if (point_size == 1)
+        return std::vector<glm::vec3>(interpolation_count, pts[0]);
+
+    int segments = point_size - 1;
+
+    int interpolationRatio = (interpolation_count - 1) / segments;
+    int interpolationQuotient = (interpolation_count - 1) % segments;
+
+    std::vector<glm::vec3> dup_points;
+    dup_points.reserve(interpolation_count);
+
+    dup_points.push_back(pts[0]);
+
+    for (int i = 0; i < segments; ++i)
+    {
+        glm::vec3 diff = pts[i + 1] - pts[i];
+        float length = glm::length(diff);
+
+        // Avoid normalize(0,0,0)
+        glm::vec3 norm;
+        if (length == 0.0f)
+            norm = glm::vec3(0.0f);
+        else
+            norm = diff / length;
+
+        int inter = interpolationRatio;
+
+        if (interpolationQuotient > 0)
+        {
+            inter++;
+            interpolationQuotient--;
+        }
+
+        // Ensure at least one division
+        inter = std::max(inter, 1);
+
+        float unitLength = (length == 0.0f) ? 0.0f : length / inter;
+
+        for (int j = 1; j < inter; j++)
+        {
+            glm::vec3 pos = pts[i] + norm * (unitLength * j);
+            dup_points.push_back(pos);
+        }
+
+        dup_points.push_back(pts[i + 1]);
+    }
+
+    return dup_points;
 }
 
 void GraphObject::functionalInterpolate(int number)
@@ -874,13 +959,141 @@ void GraphObject::functionalInterpolate(int number)
 //     InitFillData();
 // }
 
+// void GraphObject::alignPoints(GraphMathObject *target)
+// {
+//     // Ensure points are generated for bezier-based objects before alignment
+//     if (this->is_bezier_path && this->bezier_dirty) this->build_points_from_bezier();
+//     if (target->is_bezier_path && target->bezier_dirty) target->build_points_from_bezier();
+
+//     // If neither has points/ranges (like a parent Text object), skip alignment
+//     if (this->point_sub_path_ranges.empty() && target->point_sub_path_ranges.empty())
+//         return;
+
+//     auto extract_subpaths = [](GraphMathObject &g)
+//     {
+//         std::vector<std::vector<glm::vec3>> result;
+//         for (auto &r : g.point_sub_path_ranges)
+//         {
+//             int start = r.first;
+//             int count = r.second;
+//             std::vector<glm::vec3> sub;
+//             sub.reserve(count);
+//             for (int i = 0; i < count; i++)
+//                 sub.push_back(g.points[start + i]);
+//             result.push_back(sub);
+//         }
+//         return result;
+//     };
+
+//     auto resample_curve = [](const std::vector<glm::vec3> &pts, int N)
+//     {
+//         if ((int)pts.size() == N) return pts;
+//         if (pts.empty()) return std::vector<glm::vec3>(N, glm::vec3(0));
+//         if (pts.size() == 1) return std::vector<glm::vec3>(N, pts[0]);
+
+//         std::vector<glm::vec3> result;
+//         result.reserve(N);
+
+//         int S = (int)pts.size() - 1;
+//         int D = N - (int)pts.size();
+
+//         int base_add = D / S;
+//         int extra_add = D % S;
+
+//         for (int i = 0; i < S; i++)
+//         {
+//             result.push_back(pts[i]);
+//             int n_to_add = base_add + (i < extra_add ? 1 : 0);
+//             for (int j = 1; j <= n_to_add; j++)
+//             {
+//                 float t = (float)j / (float)(n_to_add + 1);
+//                 result.push_back(glm::mix(pts[i], pts[i+1], t));
+//             }
+//         }
+//         result.push_back(pts.back());
+//         return result;
+//     };
+
+//     auto A_paths = extract_subpaths(*this);
+//     auto B_paths = extract_subpaths(*target);
+
+//     int maxPaths = std::max((int)A_paths.size(), (int)B_paths.size());
+
+//     // Growth strategy: if one has fewer subpaths, they "grow" out of the last point
+//     while ((int)A_paths.size() < maxPaths) {
+//         glm::vec3 p = A_paths.empty() ? glm::vec3(0) : A_paths.back().back();
+//         A_paths.push_back({p, p}); // Zero-length segment at the end
+//     }
+//     while ((int)B_paths.size() < maxPaths) {
+//         glm::vec3 p = B_paths.empty() ? glm::vec3(0) : B_paths.back().back();
+//         B_paths.push_back({p, p});
+//     }
+
+//     std::vector<glm::vec3> finalA, finalB;
+//     std::vector<std::pair<int, int>> finalRanges;
+//     int currentOffset = 0;
+
+//     for (int i = 0; i < maxPaths; i++)
+//     {
+//         int targetN = std::max((int)A_paths[i].size(), (int)B_paths[i].size());
+//         auto resA = resample_curve(A_paths[i], targetN);
+//         auto resB = resample_curve(B_paths[i], targetN);
+
+//         finalA.insert(finalA.end(), resA.begin(), resA.end());
+//         finalB.insert(finalB.end(), resB.begin(), resB.end());
+//         finalRanges.push_back({currentOffset, targetN});
+//         currentOffset += targetN;
+//     }
+
+//     this->points = std::move(finalA);
+//     this->point_sub_path_ranges = finalRanges;
+
+//     target->points = std::move(finalB);
+//     target->point_sub_path_ranges = finalRanges;
+
+//     // Synchronize secondary data
+//     this->applyColorToVertex();
+//     target->applyColorToVertex();
+//     this->setStrokeData();
+//     target->setStrokeData();
+// }
+
+inline void showPoints(std::vector<glm::vec3> pts)
+{
+    for (auto p : pts)
+    {
+        std::cout << "(" << p.x << "," << p.y << "," << p.z << ") , ";
+    }
+    std::cout << std::endl;
+}
+
+inline void showRange(std::vector<std::pair<int, int>> ranges)
+{
+    for (auto r : ranges)
+    {
+        std::cout << "(" << r.first << "," << r.second << ") , ";
+    }
+    std::cout << std::endl;
+}
+
+/*
+std::cout << "point initialize" << std::endl;
+    std::cout << "first: " << std::endl;
+    showPoints(points);
+    std::cout << "range: " << std::endl;
+    showRange(point_sub_path_ranges);
+    std::cout << "second: " << std::endl;
+    showPoints(target->points);
+    std::cout << "range: " << std::endl;
+*/
+
 void GraphObject::alignPoints(GraphMathObject *target)
 {
-    auto extract_subpaths = [](GraphMathObject &g)
+    auto extract_subpaths = [](GraphMathObject *g)
     {
         std::vector<std::vector<glm::vec3>> result;
 
-        for (auto &r : g.point_sub_path_ranges)
+        for (auto &r : g->point_sub_path_ranges)
         {
             int start = r.first;
             int count = r.second;
@@ -889,7 +1102,7 @@ void GraphObject::alignPoints(GraphMathObject *target)
             sub.reserve(count);
 
             for (int i = 0; i < count; i++)
-                sub.push_back(g.points[start + i]);
+                sub.push_back(g->points[start + i]);
 
             result.push_back(sub);
         }
@@ -897,109 +1110,73 @@ void GraphObject::alignPoints(GraphMathObject *target)
         return result;
     };
 
-    auto resample_curve = [](const std::vector<glm::vec3> &pts, int N)
+    // std::cout << "point initialize" << std::endl;
+    // std::cout << "first: " << std::endl;
+    // showPoints(points);
+    // std::cout << "range: " << std::endl;
+    // showRange(point_sub_path_ranges);
+    // std::cout << "second: " << std::endl;
+    // showPoints(target->points);
+    // std::cout << "range: " << std::endl;
+    // showRange(target->point_sub_path_ranges);
+
+    auto A = extract_subpaths(this);
+    auto B = extract_subpaths(target);
+
+    int S = A.size();
+    int T = B.size();
+
+    int M = std::max(S, T);
+
+    std::vector<glm::vec3> newA;
+    std::vector<glm::vec3> newB;
+
+    std::vector<std::pair<int, int>> ranges;
+
+    for (int i = 0; i < M; i++)
     {
-        if (pts.size() == N)
-            return pts;
+        int ia = std::min(i, S - 1);
+        int ib = std::min(i, T - 1);
 
-        if (pts.size() < 2)
-            return std::vector<glm::vec3>(N, pts.empty() ? glm::vec3(0) : pts.front());
+        auto &sa = A[ia];
+        auto &sb = B[ib];
 
-        std::vector<float> lengths;
-        lengths.reserve(pts.size());
-        lengths.push_back(0.0f);
+        int sizeA = sa.size();
+        int sizeB = sb.size();
 
-        for (size_t i = 1; i < pts.size(); i++)
-            lengths.push_back(lengths.back() + glm::distance(pts[i], pts[i - 1]));
+        int target_size = std::max(sizeA, sizeB);
 
-        float total = lengths.back();
+        auto sa_resampled = linearInterpolate(sa, target_size);
+        auto sb_resampled = linearInterpolate(sb, target_size);
 
-        std::vector<glm::vec3> result;
-        result.reserve(N);
+        int start = newA.size();
 
-        int seg = 1;
+        newA.insert(newA.end(), sa_resampled.begin(), sa_resampled.end());
+        newB.insert(newB.end(), sb_resampled.begin(), sb_resampled.end());
 
-        for (int i = 0; i < N; i++)
-        {
-            float target_len = total * ((float)i / (N - 1));
-
-            while ((size_t)seg < lengths.size() && lengths[seg] < target_len)
-                seg++;
-
-            int j = std::max(1, seg);
-
-            float t =
-                (lengths[j] - lengths[j - 1] > 1e-8f)
-                    ? (target_len - lengths[j - 1]) /
-                          (lengths[j] - lengths[j - 1])
-                    : 0.0f;
-
-            result.push_back(glm::mix(pts[j - 1], pts[j], t));
-        }
-
-        return result;
-    };
-
-    // Extract paths
-    auto A_paths = extract_subpaths(*this);
-    auto B_paths = extract_subpaths(*target);
-
-    int max_paths = std::max(A_paths.size(), B_paths.size());
-
-    std::vector<glm::vec3> newA_points;
-    std::vector<glm::vec3> newB_points;
-    std::vector<std::pair<int, int>> new_subpaths;
-
-    int start_idx = 0;
-
-    for (int i = 0; i < max_paths; i++)
-    {
-        std::vector<glm::vec3> Ap;
-        std::vector<glm::vec3> Bp;
-
-        if (i < (int)A_paths.size())
-            Ap = A_paths[i];
-
-        if (i < (int)B_paths.size())
-            Bp = B_paths[i];
-
-        // Handle empty paths
-        if (Ap.empty() && !Bp.empty())
-            Ap = std::vector<glm::vec3>(Bp.size(), Bp.front());
-
-        if (Bp.empty() && !Ap.empty())
-            Bp = std::vector<glm::vec3>(Ap.size(), Ap.front());
-
-        int N = std::max(Ap.size(), Bp.size());
-
-        if ((int)Ap.size() < N)
-            Ap = resample_curve(Ap, N);
-
-        if ((int)Bp.size() < N)
-            Bp = resample_curve(Bp, N);
-
-        for (int j = 0; j < N; j++)
-        {
-            newA_points.push_back(Ap[j]);
-            newB_points.push_back(Bp[j]);
-        }
-
-        new_subpaths.push_back({start_idx, N});
-        start_idx += N;
+        ranges.push_back({start, target_size});
     }
 
-    // Apply aligned points
-    this->points = std::move(newA_points);
-    this->point_sub_path_ranges = new_subpaths;
+    points = newA;
+    point_sub_path_ranges = ranges;
 
-    target->points = std::move(newB_points);
-    target->point_sub_path_ranges = new_subpaths;
+    target->points = newB;
+    target->point_sub_path_ranges = ranges;
+
+    // std::cout << "point initialize second" << std::endl;
+    // std::cout << "first: " << std::endl;
+    // showPoints(points);
+    // std::cout << "range: " << std::endl;
+    // showRange(point_sub_path_ranges);
+    // std::cout << "second: " << std::endl;
+    // showPoints(target->points);
+    // std::cout << "range: " << std::endl;
+    // showRange(target->point_sub_path_ranges);
+    target->setStrokeData();
+    setStrokeData();
 
     this->applyColorToVertex();
-    target->applyColorToVertex();
-
-    this->updatePoints();
-    target->updatePoints();
+        target->applyColorToVertex();
 }
 
 void GraphObject::interpolate(const GraphMathObject *target, float t)

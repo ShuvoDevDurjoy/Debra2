@@ -101,6 +101,7 @@ void Char::generateBezierOutline(char c, float x, float y, float scale) {
     FT_Done_Face(face);
     FT_Done_FreeType(ft);
     close_path();
+    Init(GraphObject::drawSize++);
     // build_points_from_bezier();
 
     // Update the bounding box for this character in world units

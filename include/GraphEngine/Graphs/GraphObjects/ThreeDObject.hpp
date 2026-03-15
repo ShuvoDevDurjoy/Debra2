@@ -98,6 +98,16 @@ class ThreeDObject: public GraphMathObject{
     void setShowFill(bool show_fill){
         showFill = show_fill;
     }
+
+    void start_bezier_path(glm::vec3 start_point) override {}
+    void add_cubic_bezier_curve_to(glm::vec3 control1, glm::vec3 control2, glm::vec3 end_anchor) override {}
+    void add_quadratic_bezier_curve_to(glm::vec3 control, glm::vec3 end_anchor) override {}
+    void add_line_to(glm::vec3 end_anchor) override {}
+    void build_points_from_bezier() override {}
+    void subdivide_bezier_curves() override {}
+    void add(GraphMathObject *) override {}
+    void alignPoints(GraphMathObject*) override {}
+    void applyColorToVertex() override {}
 };
 
 #endif

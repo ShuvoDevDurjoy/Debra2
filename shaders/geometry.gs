@@ -1,4 +1,4 @@
-// layout(lines) in;
+f// layout(lines) in;
 // layout(triangle_strip, max_vertices=4) out;
 
 // uniform mat4 model;
@@ -242,12 +242,10 @@ out vec3 obj_color;
 flat out vec3 corner1, corner2, corner3;
 
 uniform int vertices_increment_count;
-uniform float stroke_line_width;
+uniform int u_layer;
 
 void main()
 {
-    // ... (Your existing Row/Progress logic) ...
-
     // Calculate Normal in World Space
     vec3 e0 = gs_in[1].pos - gs_in[0].pos;
     vec3 e1 = gs_in[2].pos - gs_in[0].pos;
@@ -260,32 +258,68 @@ void main()
     corner2 = (model * vec4(gs_in[1].pos, 1.0)).xyz;
     corner3 = (model * vec4(gs_in[2].pos, 1.0)).xyz;
 
-    vec3 dir0 = normalize(gs_in[0].pos - gs_in[1].pos);
-    vec3 dir1 = normalize(gs_in[2].pos - gs_in[1].pos);
+    // Calculate object-space perpendiculars for flat strokes
+    vec3 v0 = gs_in[0].pos;
+    vec3 v1 = gs_in[1].pos;
+    vec3 v2 = gs_in[2].pos;
 
-    mat4 pv = projection * view * model;
+    vec3 edge01 = normalize(v1 - v0);
+    vec3 edge12 = normalize(v2 - v1);
+    vec3 edge20 = normalize(v0 - v2);
 
-    // Define vertices in Object Space
-    vec4 p[6];
-    p[0] = vec4(gs_in[0].pos + dir1 * stroke_line_width * 0.05, 1.0);
-    p[1] = vec4(gs_in[0].pos, 1.0);
-    p[2] = vec4(gs_in[1].pos + dir0 * stroke_line_width * 0.05 + dir1 * stroke_line_width * 0.05, 1.0);
-    p[3] = vec4(gs_in[1].pos, 1.0);
-    p[4] = vec4(gs_in[2].pos + dir0 * stroke_line_width * 0.05, 1.0);
-    p[5] = vec4(gs_in[2].pos, 1.0);
+    // Assuming the shape is in the XY plane by default (normal is Z)
+    // For a flat shape, we want the offset to be in the plane.
+    // We can use the cross product of the edge and the face normal.
+    vec3 faceNormal = normalize(cross(v1 - v0, v2 - v0));
+    vec3 perp01 = normalize(cross(edge01, faceNormal));
+    vec3 perp12 = normalize(cross(edge12, faceNormal));
+    vec3 perp20 = normalize(cross(edge20, faceNormal));
 
-    // Emit the strip
-    // Note: FragPos must be (model * p[i]) to match corner world space
-    for(int i = 0; i < 6; i++) {
-        obj_color = gs_in[i/2].color; // Simplified color mapping
-        FragPos = (model * p[i]).xyz; 
+    float w = stroke_line_width * 0.5;
+
+    float zBias = float(u_layer) * 0.001 + 0.0001; 
+
+    // Edge 0-1
+    vec3 p[4];
+    p[0] = v0 + perp01 * w;
+    p[1] = v0;
+    p[2] = v1 + perp01 * w;
+    p[3] = v1;
+    
+    for(int i = 0; i < 4; i++) {
+        obj_color = gs_in[i/2].color;
+        FragPos = (model * vec4(p[i], 1.0)).xyz;
         gl_Position = projection * view * vec4(FragPos, 1.0);
+        gl_Position.z -= zBias * gl_Position.w;
         EmitVertex();
-        
-        // Handling your 7th vertex logic if needed for triangle closure
-        if(i == 2) { 
-             // Duplicate or adjust based on your specific strip needs
-        }
+    }
+    EndPrimitive();
+
+    // Edge 1-2
+    p[0] = v1 + perp12 * w;
+    p[1] = v1;
+    p[2] = v2 + perp12 * w;
+    p[3] = v2;
+    for(int i = 0; i < 4; i++) {
+        obj_color = gs_in[i/2 + 1 < 3 ? i/2+1 : 2].color;
+        FragPos = (model * vec4(p[i], 1.0)).xyz;
+        gl_Position = projection * view * vec4(FragPos, 1.0);
+        gl_Position.z -= zBias * gl_Position.w;
+        EmitVertex();
+    }
+    EndPrimitive();
+
+    // Edge 2-0
+    p[0] = v2 + perp20 * w;
+    p[1] = v2;
+    p[2] = v0 + perp20 * w;
+    p[3] = v0;
+    for(int i = 0; i < 4; i++) {
+        obj_color = gs_in[i/2 == 0 ? 2 : 0].color;
+        FragPos = (model * vec4(p[i], 1.0)).xyz;
+        gl_Position = projection * view * vec4(FragPos, 1.0);
+        gl_Position.z -= zBias * gl_Position.w;
+        EmitVertex();
     }
     EndPrimitive();
 }

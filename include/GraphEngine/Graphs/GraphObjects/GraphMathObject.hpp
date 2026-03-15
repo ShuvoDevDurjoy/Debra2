@@ -205,7 +205,7 @@ public:
     }
 
 
-protected:
+public:
     bool bezier_dirty = true;
     bool stroke_dirty = true;
     bool is_smooth = false;

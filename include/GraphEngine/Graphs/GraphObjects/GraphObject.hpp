@@ -154,6 +154,7 @@ public:
     void setAllBezierPoints(const std::vector<glm::vec3>& pts) override;
 
     void linearInterpolate(int);
+    std::vector<glm::vec3> linearInterpolate(std::vector<glm::vec3>, int );
     void functionalInterpolate(int);
 
     void interpolateColor(int);

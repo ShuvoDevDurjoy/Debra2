@@ -2,6 +2,9 @@
 
 Animation::Animation(GraphMathObject *object, float start_time, float duration)
 {
+    if(!object->is_initialized){
+        object->Init(GraphApp::drawCount++);
+    }
     targetObject = object;
     this->start_time = start_time;
     this->duration = duration;
@@ -9,11 +12,16 @@ Animation::Animation(GraphMathObject *object, float start_time, float duration)
     drawStart = 0;
     drawSize = targetObject->getPointsSize();
     progress = 1.0f;
-    // std::cout << "Start time is: " << start_time << std::endl;
     AnimationManager::addToManager(this);
 }
+
 Animation::Animation(GraphMathObject *object, GraphMathObject* morphObject, float start_time, float duration)
 {
+    if(!object->is_initialized)
+        object->Init(GraphApp::drawCount++);
+    if(!morphObject->is_initialized){
+        morphObject->Init(GraphApp::drawCount++);
+    }
     targetObject = object;
     this->morphObject = morphObject;
     this->start_time = start_time;

@@ -298,6 +298,7 @@ public:
     {
         graphs.push_back(graph);
     }
+
 };
 
 #include "Graph.tpp"

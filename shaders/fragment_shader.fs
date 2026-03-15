@@ -176,8 +176,14 @@ float sdSegment(vec3 p, vec3 a, vec3 b) {
 }
 
 void main() {
-    float dBase = sdSegment(v_FragPos, v_P0, v_P1);
-    float dHeight = sdSegment(v_FragPos, v_P1, v_P2);
+    // Project v_FragPos onto the plane of the stroke to ensure "paper-thin" behavior
+    vec3 edge1 = v_P1 - v_P0;
+    vec3 edge2 = v_P2 - v_P0;
+    vec3 n = normalize(cross(edge1, edge2));
+    vec3 pProj = v_FragPos - dot(v_FragPos - v_P0, n) * n;
+
+    float dBase = sdSegment(pProj, v_P0, v_P1);
+    float dHeight = sdSegment(pProj, v_P1, v_P2);
     float d = min(dBase, dHeight);
 
     // --- STABLE BLUR LOGIC ---

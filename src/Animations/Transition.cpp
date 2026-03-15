@@ -39,25 +39,25 @@ void Transition::Init()
         new Transition(t_obj, m_obj, start_time, duration);
     }
 
-    // Extra objects in target → FadeOut
-    if (t_sub_obj_count > m_sub_obj_count)
-    {
-        for (int i = min_count; i < t_sub_obj_count; i++)
-        {
-            GraphMathObject *t_obj = targetObject->subGraphObjects[i];
-            new FadeOut(t_obj, start_time, duration);
-        }
-    }
+    // // Extra objects in target → FadeOut
+    // if (t_sub_obj_count > m_sub_obj_count)
+    // {
+    //     for (int i = min_count; i < t_sub_obj_count; i++)
+    //     {
+    //         GraphMathObject *t_obj = targetObject->subGraphObjects[i];
+    //         new FadeOut(t_obj, start_time, duration);
+    //     }
+    // }
 
-    // Extra objects in morph → ShowCreation
-    if (m_sub_obj_count > t_sub_obj_count)
-    {
-        for (int i = min_count; i < m_sub_obj_count; i++)
-        {
-            GraphMathObject *m_obj = morphObject->subGraphObjects[i];
-            new ShowCreation(m_obj, start_time, duration);
-        }
-    }
+    // // Extra objects in morph → ShowCreation
+    // if (m_sub_obj_count > t_sub_obj_count)
+    // {
+    //     for (int i = min_count; i < m_sub_obj_count; i++)
+    //     {
+    //         GraphMathObject *m_obj = morphObject->subGraphObjects[i];
+    //         new ShowCreation(m_obj, start_time, duration);
+    //     }
+    // }
 
     is_initialized = true;
 }

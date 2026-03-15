@@ -414,29 +414,48 @@ glm::vec3 random(float t, Var v){
 int main(){
     Graph *graph = Graph::getInstance(0);
 
-    Text *tx = new Text("Title", -30, 0, 10.0f);
-    Text *name = new Text("Shuvo", 20, 10, 10.0f);
+   
+    // Text *t1 = new Text("Title", -20, 20, 10.0f);
+    // Text *t2 = new Text("Shuvo", 20, 20, 10.0f);
+    // graph->play(t1);
+    // graph->play(t2);
 
-    graph->play(name);
+    // new Transition(t1, t2, 2, 5);
 
-    NumberLine* n_line = new NumberLine(-90, 90, 10, 4);
-    n_line->add_label(3, -3);
+    TestObject *test1 = new TestObject();
+    test1->start_bezier_path(glm::vec3(0, 0, 0));
+    test1->add_line_to(glm::vec3(10, 10, 0));
+    test1->add_line_to(glm::vec3(20, 0, 0));
 
-    // graph->play(n_line);
+    test1->start_bezier_path(glm::vec3(0, 20, 0));
+    test1->add_line_to(glm::vec3(10, 10, 0));
+    test1->add_line_to(glm::vec3(20, 20, 0));
 
-    graph->play(tx);
+    TestObject *test2 = new TestObject();
+    test2->start_bezier_path(glm::vec3(0, 5, 0));
+    test2->add_line_to(glm::vec3(-10, 0, 0));
+    test2->add_line_to(glm::vec3(-20, 5, 0));
+    
+    test2->start_bezier_path(glm::vec3(0, 10, 0));
+    test2->add_line_to(glm::vec3(-10, 20, 0));
+    test2->add_line_to(glm::vec3(-20, 10, 0));
+    test2->add_line_to(glm::vec3(-30, 20, 0));
 
-    Circle *circ = new Circle(20, 0, 0);
-    // graph->play(circ);
+    test1->makeSmooth();
+    // test2->makeSmooth();
 
-    new Transition(tx, name, 2, 4);
-
-    Char *c1 = new Char('S', 0, 20, 10.0f);
-    Char *c2 = new Char('H', 30, 20, 10.0f);
+    Text *c1 = new Text("tit", -20, 10, 10.0f);
+    Text *c2 = new Text("shu", 20, 10, 10.0f);
 
     graph->play(c1);
     graph->play(c2);
-    new Transition(c1, c2, 3, 2);
+
+    new Transition(c1, c2, 1, 10);
+
+    graph->play(test1);
+    graph->play(test2);
+
+    // new Transition(test1, test2, 1, 3);
 
     graph->run();
 }
