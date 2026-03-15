@@ -163,10 +163,10 @@ void Graph::draw(float tick)
     {
         // --- Pass 0: Logic Update ---
         // Baking transformations, subdividing curves, etc.
-        for (GraphMathObject *graph : graphs)
-        {
-            graph->update(tick);
-        }
+        // for (GraphMathObject *graph : graphs)
+        // {
+        //     graph->update(tick);
+        // }
 
         AnimationManager::Run(tick);
 
@@ -191,7 +191,7 @@ void Graph::draw(float tick)
             graph->updateStroke(tick);
         }
         
-        drawText(0); // Draw all added text
+        // drawText(0); // Draw all added text
     }
     catch (const std::exception &e)
     {

@@ -14,6 +14,7 @@
 #include "../include/GraphEngine/Graphs/GraphObjects/Shapes/Text.hpp"
 #include "../include/GraphEngine/Graphs/GraphObjects/Shapes/Rectangle.hpp"
 #include "../include/GraphEngine/Graphs/GraphObjects/Shapes/Arrow.hpp"
+#include "../include/GraphEngine/Graphs/GraphObjects/Shapes/Star.hpp"
 #include "../include/GraphEngine/Graphs/GraphObjects/Graphing/NumberLine.hpp"
 
 
@@ -413,37 +414,29 @@ glm::vec3 random(float t, Var v){
 int main(){
     Graph *graph = Graph::getInstance(0);
 
-    BasePolygon *poly1 = new BasePolygon(4, 10, 0, 0);
-    poly1->setColor(GraphColor(1, 0, 0));
-    BasePolygon *poly2 = new BasePolygon(4, 10, 0, 0);
-    poly2->setColor(GraphColor(0, 1, 0));
-    poly2->nextTo(poly1, Position::RIGHT);
-    BasePolygon *poly3 = new BasePolygon(4, 10, 0, 0);
-    poly3->setColor(GraphColor(0, 1, 0));
-    poly3->nextTo(poly1, Position::LEFT);
-    BasePolygon *poly4 = new BasePolygon(4, 10, 0, 0);
-    poly4->setColor(GraphColor(0, 1, 0));
-    poly4->nextTo(poly1, Position::TOP);
-    BasePolygon *poly5 = new BasePolygon(4, 10, 0, 0);
-    poly5->setColor(GraphColor(0, 1, 0));
-    poly5->nextTo(poly1, Position::BOTTOM);
+    Text *tx = new Text("Title", -30, 0, 10.0f);
+    Text *name = new Text("Shuvo", 20, 10, 10.0f);
 
-    NumberLine *n_line = new NumberLine(-90, 90, 10, 5.0f, 0, 1);
-    n_line->add_label(10);
-    graph->play(n_line);
-    new ShowCreation(n_line);
+    graph->play(name);
 
-    std::cout << std::endl;
+    NumberLine* n_line = new NumberLine(-90, 90, 10, 4);
+    n_line->add_label(3, -3);
 
-    graph->play(poly1);
-    // graph->play(poly2);
+    // graph->play(n_line);
 
-    poly1->add(poly2);
-    poly1->add(poly3);
-    poly1->add(poly4);
-    poly1->add(poly5);
+    graph->play(tx);
 
-    (new ShowCreation(poly1, 1, 10.0f))->anim_timing_func = AnimationTimmingFunction::linearProgress;
+    Circle *circ = new Circle(20, 0, 0);
+    // graph->play(circ);
+
+    new Transition(tx, name, 2, 4);
+
+    Char *c1 = new Char('S', 0, 20, 10.0f);
+    Char *c2 = new Char('H', 30, 20, 10.0f);
+
+    graph->play(c1);
+    graph->play(c2);
+    new Transition(c1, c2, 3, 2);
 
     graph->run();
 }

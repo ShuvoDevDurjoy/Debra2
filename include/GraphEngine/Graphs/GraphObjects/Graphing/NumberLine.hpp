@@ -72,13 +72,12 @@ public:
                 label.pop_back();
             }
             
-            std::cout << label << std::endl;
-            // Text *text = new Text(label, wx, y_pos + buff, 10);
+            Text *text = new Text(label, wx, y_pos + buff, label_size);
 
-            // add(text);
+            add(text);
 
-            BasePolygon *poly = new BasePolygon(3, 5, wx, y_pos + buff);
-            add(poly);
+            // BasePolygon *poly = new BasePolygon(3, 5, wx, y_pos + buff);
+            // add(poly);
 
             v += tick_step;
         }

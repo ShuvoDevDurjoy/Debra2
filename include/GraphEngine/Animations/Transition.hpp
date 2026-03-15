@@ -4,6 +4,8 @@
 
 #include "Animation.hpp"
 #include "AnimationManager.hpp"
+#include "Fade.hpp"
+#include "Creation.hpp"
 
 
 class Transition: public Animation{
@@ -15,7 +17,7 @@ class Transition: public Animation{
         std::vector<glm::vec3> fillOriginalPoints;
 
     public:
-        Transition(GraphObject *object, GraphObject *targetObj, float start_time = 0.0f, float duration = 3.0f);
+        Transition(GraphMathObject *object, GraphMathObject *targetObj, float start_time = 0.0f, float duration = 3.0f);
         void play(float dt) override;
 
         void morphPoints(float alpha = 0);

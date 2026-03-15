@@ -23,11 +23,16 @@ void GraphObject::update(float dt)
 
     if (showGraph)
     {
-        if (showFill)
-            updateFill(dt);
+        // if (showFill)
+        //     updateFill(dt);
 
         if (showStroke)
             updateStroke(dt);
+    }
+
+    for (GraphMathObject *subObj : subGraphObjects)
+    {
+        subObj->draw(dt);
     }
 }
 
@@ -37,6 +42,7 @@ void GraphObject::updateStroke(float dt)
     if (stroke_data_initialized && stroke_shader && showGraph)
     {
 
+        // std::cout << "Drawing stroke"<<getSize() << std::endl;
         // GLboolean depthWasEnabled = glIsEnabled(GL_DEPTH_TEST);
 
         // glEnable(GL_DEPTH_TEST);
@@ -98,14 +104,15 @@ void GraphObject::updateStroke(float dt)
             glDrawArrays(GL_LINE_STRIP, drawStart, getSize());
         }
 
+        for (GraphMathObject *subObj : subGraphObjects)
+    {
+        subObj->updateStroke(dt);
+    }
+
         // if (!depthWasEnabled)
         //     glDisable(GL_DEPTH_TEST);
     }
 
-    for (GraphMathObject *subObj : subGraphObjects)
-    {
-        subObj->draw(dt);
-    }
 }
 
 void GraphObject::updateFill(float dt)
@@ -224,10 +231,7 @@ void GraphObject::Init(float s_time)
         glGenBuffers(1, &FillVBO);
         glGenVertexArrays(1, &FillVAO);
         glGenBuffers(1, &FillVBO);
-        std::cerr << "No points in the graph to initialize" << std::endl;
     }
-    else
-    {
         // Initialize OpenGL Buffer and Array
         glGenVertexArrays(1, &StrokeVAO);
         glGenBuffers(1, &StrokeVBO);
@@ -239,7 +243,6 @@ void GraphObject::Init(float s_time)
 
         drawSize = getSize();
         drawStart = 0;
-    }
 
     InitSubObject(s_time);
 
@@ -297,7 +300,7 @@ inline void showPoints(std::vector<glm::vec3> pts)
 
 void GraphObject::setStrokeData()
 {
-    if (is_bezier_path)
+    if (is_bezier_path && bezier_dirty)
     {
         build_points_from_bezier();
     }
