@@ -1,6 +1,6 @@
 #include "../../include/GraphEngine/Animations/Transition.hpp"
 
-Transition::Transition(GraphMathObject *object, GraphMathObject *targetObj, float start_time, float duration) : Animation(object, targetObj, start_time, duration)
+Transition::Transition(GraphMathObject *object, GraphMathObject *targetObj) : Animation(object, targetObj)
 {
 }
 
@@ -24,6 +24,12 @@ inline void showRange(std::vector<std::pair<int,int>> ranges)
 
 void Transition::Init()
 {
+    if (!morphObject || !targetObject) return;
+
+    // Ensure both objects have points/ranges
+    if (morphObject->points.empty() && morphObject->is_bezier_path) morphObject->build_points_from_bezier();
+    if (targetObject->points.empty() && targetObject->is_bezier_path) targetObject->build_points_from_bezier();
+
     targetObject->alignPoints(morphObject);
 
     int t_sub_obj_count = targetObject->subGraphObjects.size();
@@ -36,28 +42,34 @@ void Transition::Init()
     {
         GraphMathObject *t_obj = targetObject->subGraphObjects[i];
         GraphMathObject *m_obj = morphObject->subGraphObjects[i];
-        new Transition(t_obj, m_obj, start_time, duration);
+        new Transition(t_obj, m_obj);
     }
 
-    // // Extra objects in target → FadeOut
-    // if (t_sub_obj_count > m_sub_obj_count)
-    // {
-    //     for (int i = min_count; i < t_sub_obj_count; i++)
-    //     {
-    //         GraphMathObject *t_obj = targetObject->subGraphObjects[i];
-    //         new FadeOut(t_obj, start_time, duration);
-    //     }
-    // }
+    // Extra objects in target → FadeOut
+    if (t_sub_obj_count > m_sub_obj_count)
+    {
+        for (int i = min_count; i < t_sub_obj_count; i++)
+        {
+            GraphMathObject *t_obj = targetObject->subGraphObjects[i];
+            Animation* anim = new FadeOut(t_obj);
+            anim->start_time = start_time;
+            anim->duration = duration;
+            anim->end_time = anim->start_time + anim->duration;
+        }
+    }
 
-    // // Extra objects in morph → ShowCreation
-    // if (m_sub_obj_count > t_sub_obj_count)
-    // {
-    //     for (int i = min_count; i < m_sub_obj_count; i++)
-    //     {
-    //         GraphMathObject *m_obj = morphObject->subGraphObjects[i];
-    //         new ShowCreation(m_obj, start_time, duration);
-    //     }
-    // }
+    // Extra objects in morph → ShowCreation
+    if (m_sub_obj_count > t_sub_obj_count)
+    {
+        for (int i = min_count; i < m_sub_obj_count; i++)
+        {
+            GraphMathObject *m_obj = morphObject->subGraphObjects[i];
+            Animation* anim = new ShowCreation(m_obj);
+            anim->start_time = start_time;
+            anim->duration = duration;
+            anim->end_time = anim->start_time + anim->duration;
+        }
+    }
 
     is_initialized = true;
 }

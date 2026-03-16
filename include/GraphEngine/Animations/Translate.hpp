@@ -14,10 +14,11 @@ class Translate: public Animation{
         Position pivot;
         glm::vec3 current = glm::vec3(0, 0, 0);
         float lastProgress = 0;
+        glm::vec3 pos;
 
     public:
-        Translate(GraphObject *object, glm::vec3 to, float start_time = 0.0f, float duration = 1.0f, Position pos = Position::TOP_LEFT);
-        Translate(GraphObject *object, Position to = Position::NONE, float start_time = 0.0f, float duration = 1.0f, Position pos = Position::TOP_LEFT);
+        Translate(GraphObject *object, glm::vec3 to, Position pos = Position::TOP_LEFT);
+        Translate(GraphObject *object, Position to = Position::NONE, Position pos = Position::TOP_LEFT);
 
         void Init();
 
@@ -33,7 +34,7 @@ class Scale: public Animation{
         glm::vec3 startScale = glm::vec3(1, 1, 1);
 
     public:
-        Scale(GraphObject *object, glm::vec3 scale_factor, float start_time = 0.0f, float duration = 1.0f);
+        Scale(GraphObject *object, glm::vec3 scale_factor);
         void play(float dt);
 };
 
@@ -51,8 +52,8 @@ class Rotation: public Animation{
         bool calc_pivot = true;
 
     public:
-        Rotation(GraphObject *object, glm::vec3 rot_amount = glm::vec3(0, 0, 45), Position pos = Position::BOTTOM_LEFT, float start_time = 0.0f, float duration = 3.0f);
-        Rotation(GraphObject *object, glm::vec3 rot_amount = glm::vec3(0, 0, 45), glm::vec3 pivot = glm::vec3(0, 0, 0), float start_time = 0.0f, float duration = 3.0f);
+        Rotation(GraphObject *object, glm::vec3 rot_amount = glm::vec3(0, 0, 45), Position pos = Position::BOTTOM_LEFT);
+        Rotation(GraphObject *object, glm::vec3 rot_amount = glm::vec3(0, 0, 45), glm::vec3 pivot = glm::vec3(0, 0, 0));
         void Init();
         glm::vec3 getPivotPosition(Position pos);
         void play(float dt);

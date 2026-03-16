@@ -13,7 +13,8 @@
 #include "../../Utils/Config.hpp"
 
 #include "../../Core/Shader.hpp"
-#include "../../Core/GraphApp.hpp"
+#include <GraphEngine/Core/GraphApp.hpp>
+#include <GraphEngine/Graphs/GraphObjects/GraphMathObject.hpp>
 
 // glm library header to handle matrix
 #include "../../../glm/glm.hpp"
@@ -38,9 +39,9 @@ public:
     int drawStart = 0, drawSize = 0;
 
     //specific to this class
-    GLuint StrokeVAO, StrokeVBO;
-    GLuint FillVAO, FillVBO;
-    GLuint CoverVAO, CoverVBO;
+    GLuint StrokeVAO = 0, StrokeVBO = 0;
+    GLuint FillVAO = 0, FillVBO = 0;
+    GLuint CoverVAO = 0, CoverVBO = 0;
 
     bool stroke_data_initialized = false;
     bool fill_data_initialized = false;

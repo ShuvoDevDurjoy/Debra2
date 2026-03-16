@@ -5,7 +5,8 @@
 #include "../include/glad.h"
 #include "../include/glfw3.h"
 #include <map>
-#include "../Graphs/Graph.hpp"
+// #include "../Graphs/Graph.hpp"
+#include <GraphEngine/Scene/Scene.hpp>
 #include "../Core/Shader.hpp"
 #include "../../Event/KeyEventManager.hpp"
 #include "../../Event/MouseEventListener.hpp"
@@ -21,7 +22,7 @@
 #define TEXT_FRAGMENT_SHADER_FILE_NAME "./shaders/text.fs"
 #define FONT_FAMILY_PATH "./fonts/NunitoSans.ttf"
 
-class Graph;
+class Scene;
 
 class GraphApp : public MouseEvents, public KeyClicked
 {
@@ -36,12 +37,9 @@ public:
     GLFWwindow *window;
     
     public:
-    static float lastX , lastY, rotX, rotY;
+    static float lastX, lastY, rotX, rotY;
     static KeyEventManager *keyManager;
     static MouseEventListener *mouseEventMangager;
-    static glm::mat4 projection, view;
-    static glm::vec3 cameraPos;
-    static glm::vec3 camera_center;
     static int drawCount;
     static bool isAlive;
 
@@ -52,8 +50,8 @@ private:
     static void frame_buffer_size_callback(GLFWwindow *, int, int);
     void process_input();
     void setCallback();
-    void mainLoop(Graph *);
-    void cleanUp(Graph *);
+    void mainLoop(Scene *);
+    void cleanUp(Scene *);
 
     void LoadFont(const std::string &path);
 
@@ -62,14 +60,14 @@ private:
     static void mouseClickCallback(GLFWwindow *window, int button, int action, int mode);
 
 public:
-    GraphApp();
+    GraphApp(int width = 1200, int height = 600);
     ~GraphApp() {};
     GLFWwindow *getWindow() { return window; };
     Shader *getShader() { return shader; };
     Shader *getTextShader() { return text_shader; };
     void refreshOpenGL(std::vector<float> &, int, int);
     void setColor(float, float, float);
-    void run(Graph *);
+    void run(Scene *);
 
     void onMouseClickCallback(MouseEvent) override{}
 

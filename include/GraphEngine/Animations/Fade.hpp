@@ -6,9 +6,7 @@
 // FadeIn: animates fillOpacity and strokeOpacity from 0 to 1 over the duration.
 class FadeIn : public Animation {
 public:
-    FadeIn(GraphMathObject* object, float start_time = 0.0f, float duration = 1.0f)
-        : Animation(object, start_time, duration)
-    {
+    FadeIn(GraphMathObject* object): Animation(object){
         // Start invisible
         object->setFillOpacity(0.0f);
         object->setStrokeOpacity(0.0f);
@@ -30,8 +28,8 @@ public:
 // FadeOut: animates fillOpacity and strokeOpacity from 1 to 0 over the duration.
 class FadeOut : public Animation {
 public:
-    FadeOut(GraphMathObject* object, float start_time = 0.0f, float duration = 1.0f)
-        : Animation(object, start_time, duration) {}
+    FadeOut(GraphMathObject* object)
+        : Animation(object) {}
 
     void play(float dt) override {
         if (dt < start_time) return;

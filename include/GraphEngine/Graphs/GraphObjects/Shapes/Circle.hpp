@@ -43,7 +43,6 @@ private:
 
         makeSmooth();
         setDimension(centerX - radius, centerX + radius, centerY - radius, centerY + radius);
-        build_points_from_bezier();
     }
 };
 

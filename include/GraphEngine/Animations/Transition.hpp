@@ -17,7 +17,7 @@ class Transition: public Animation{
         std::vector<glm::vec3> fillOriginalPoints;
 
     public:
-        Transition(GraphMathObject *object, GraphMathObject *targetObj, float start_time = 0.0f, float duration = 3.0f);
+        Transition(GraphMathObject *object, GraphMathObject *targetObj);
         void play(float dt) override;
 
         void morphPoints(float alpha = 0);

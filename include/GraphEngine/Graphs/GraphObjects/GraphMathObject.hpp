@@ -15,6 +15,8 @@
 #include "../../../glm/glm.hpp"
 #include "../../../glm/gtc/matrix_transform.hpp"
 
+class Scene;
+
 class Dimension
 {
     float x, y, width, height;
@@ -34,7 +36,7 @@ class GraphMathObject
 public:
     Shader *stroke_shader = nullptr, *fill_shader = nullptr;
 
-    glm::mat4 model = glm::mat4(1.0f), view, projection;
+    glm::mat4 model = glm::mat4(1.0f);
     glm::mat4 scale = glm::mat4(1.0f);
 
     glm::mat4 baseModel = glm::mat4(1.0f);
@@ -45,6 +47,10 @@ public:
     float phi = 0, theta = 0;
 
     int layer = 0;
+    long long id;
+    GraphMathObject* parent = nullptr;
+    Scene* scene = nullptr;
+    static long long next_id;
 
     bool showStroke = true;
     bool showGraph = true;
@@ -119,6 +125,8 @@ public:
     Dimension *dim;
 
 public:
+    GraphMathObject();
+    virtual void on_added_to_scene(Scene* target_scene);
     virtual void Init(float) = 0;
 
 public:
@@ -145,6 +153,7 @@ public:
 public:
     virtual void alignPoints(GraphMathObject*) = 0;
     virtual void interpolate(const GraphMathObject*, float t = 0) = 0;
+    virtual void updateDimensions();
 
 public:
     int getPointsSize();
@@ -182,7 +191,7 @@ public:
     virtual void subdivide_bezier_curves() = 0;
     virtual std::vector<glm::vec3> getAllBezierPoints();
     virtual void setAllBezierPoints(const std::vector<glm::vec3>& pts);
-    virtual void add(GraphMathObject *) = 0;
+    virtual void add(GraphMathObject *);
 
 public:
     void setStrokeColors(std::vector<GraphColor> stroke_colors);

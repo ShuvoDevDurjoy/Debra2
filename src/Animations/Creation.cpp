@@ -17,7 +17,11 @@ void ShowCreation::Init()
         for (GraphMathObject *sub : targetObject->subGraphObjects)
         {
             sub->showGraph = false;
-            (new ShowCreation(sub, start_time + index * ds, dt))->anim_timing_func = this->anim_timing_func;
+            Animation* anim = new ShowCreation(sub);
+            anim->start_time = start_time + index * ds;
+            anim->duration = dt;
+            anim->end_time = anim->start_time + anim->duration;
+            anim->anim_timing_func = this->anim_timing_func;
             index++;
         }
     }
@@ -29,14 +33,12 @@ void ShowCreation::play(float dt)
 {
     if (dt < start_time)
     {
-        progress = 0;
         return;
     }
     if(!is_initialized)
     Init();
     if (dt >= end_time)
     {
-        progress = 1;
         targetObject->setStrokeProgress(1);
         targetObject->setFillProgress(1);
         return;
@@ -53,13 +55,11 @@ void ShowFillCreation::play(float dt)
 {
     if (dt < start_time)
     {
-        fillProgress = 0;
         targetObject->setFillProgress(0);
         return;
     }
     if (dt > end_time)
     {
-        fillProgress = 1;
         targetObject->setFillProgress(1);
         return;
     }

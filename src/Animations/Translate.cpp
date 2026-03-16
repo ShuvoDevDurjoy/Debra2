@@ -1,6 +1,6 @@
 #include "../../include/GraphEngine/Animations/Translate.hpp"
 
-Translate::Translate(GraphObject *object, glm::vec3 to, float start_time, float duration, Position pos) : Animation(object, start_time, duration)
+Translate::Translate(GraphObject *object, glm::vec3 to, Position pos) : Animation(object)
 {
     this->to = to;
     this->pivot = pos;
@@ -43,7 +43,7 @@ inline glm::vec3 getPosition(float x, float y, float width, float height, Positi
     return position;
 }
 
-Translate::Translate(GraphObject *object, Position to, float start_time, float duration, Position pos) : Animation(object, start_time, duration)
+Translate::Translate(GraphObject *object, Position to, Position pos) : Animation(object)
 {
     this->to = getPosition(object->x, object->y, object->width, object->height, to);
     this->pivot = pos;
@@ -101,15 +101,11 @@ void Translate::play(float dt)
 {
     if (dt < start_time)
     {
-        progress = 0;
-        updatingPos = false;
         return;
     }
 
     if (dt >= end_time)
     {
-        progress = 1;
-        updatingPos = false;
         return;
     }
 
@@ -117,9 +113,7 @@ void Translate::play(float dt)
         Init();
     }
 
-    updatingPos = true;
     float cur_prog = AnimationTimmingFunction::easeInOutExpo( dt - start_time, duration);
-    pos = offset + to * cur_prog;
     if(GraphApp::isAlive == false)
         return;
     // targetObject->moveTo(pos);
@@ -129,8 +123,8 @@ void Translate::play(float dt)
 }
 
 // Scale Animation constructor
-Scale::Scale(GraphObject *object, glm::vec3 targetScale, float start_time, float duration)
-    : Animation(object, start_time, duration)
+Scale::Scale(GraphObject *object, glm::vec3 targetScale)
+    : Animation(object)
 {
     this->targetScale = targetScale;
 }
@@ -156,7 +150,7 @@ void Scale::play(float dt)
 }
 
 
-Rotation::Rotation(GraphObject* object, glm::vec3 rot_amount, Position pos, float start_time, float duration): Animation(object, start_time, duration){
+Rotation::Rotation(GraphObject* object, glm::vec3 rot_amount, Position pos): Animation(object){
     this->x = object->x;
     this->y = object->y;
     this->width = object->width;
@@ -172,7 +166,7 @@ Rotation::Rotation(GraphObject* object, glm::vec3 rot_amount, Position pos, floa
     calc_pivot = true;
     // std::cout << "x is: " << x << " y is: " << y << " width is : " << width << " heighth is : " << height << std::endl;
 }
-Rotation::Rotation(GraphObject* object, glm::vec3 rot_amount, glm::vec3 pivot, float start_time, float duration): Animation(object, start_time, duration){
+Rotation::Rotation(GraphObject* object, glm::vec3 rot_amount, glm::vec3 pivot): Animation(object){
     this->x = object->x;
     this->y = object->y;
     this->width = object->width;

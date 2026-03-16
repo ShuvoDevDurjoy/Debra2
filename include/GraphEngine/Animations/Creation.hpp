@@ -9,7 +9,7 @@ class ShowCreation: public Animation{
         glm::vec3 to;
 
     public: 
-    ShowCreation(GraphMathObject* object, float start_time = 0, float duration = 2.0f): Animation(object, start_time, duration){
+    ShowCreation(GraphMathObject* object): Animation(object){
         // targetObject->prepareSubObjects(start_time, duration);
     }
     void Init();
@@ -21,7 +21,7 @@ class ShowFillCreation: public Animation{
         glm::vec3 to;
 
     public: 
-    ShowFillCreation(GraphMathObject* object, float start_time = 0, float duration = 2.0f): Animation(object, start_time, duration){
+    ShowFillCreation(GraphMathObject* object): Animation(object){
         // targetObject->prepareSubObjects(start_time, duration);
 
     }
@@ -31,11 +31,10 @@ class ShowFillCreation: public Animation{
 class UnCreate: public Animation{
 
     public: 
-    UnCreate(GraphObject* object, float start_time = 0, float duration = 2.0f): Animation(object, start_time, duration){}
+    UnCreate(GraphObject* object): Animation(object){}
     void play(float dt) override{
         if(dt < start_time) return;
         if(dt > end_time) {
-            progress = 0;
             return;
         }
         float prg = (AnimationTimmingFunction::easeInOutExpo(1.0f - (dt - start_time), duration));

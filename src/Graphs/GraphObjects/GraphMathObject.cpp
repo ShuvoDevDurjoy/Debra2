@@ -1,4 +1,44 @@
 #include "../../../include/GraphEngine/Graphs/GraphObjects/GraphMathObject.hpp"
+#include "../../../include/GraphEngine/Scene/Graph.hpp"
+
+long long GraphMathObject::next_id = 0;
+
+GraphMathObject::GraphMathObject()
+    : id(next_id++), parent(nullptr), scene(nullptr), is_initialized(false), x(0), y(0), width(0), height(0)
+{
+}
+
+void GraphMathObject::on_added_to_scene(Scene *target_scene)
+{
+    if (this->scene == target_scene)
+        return;
+
+        
+        this->scene = target_scene;
+        target_scene->register_object(this);
+        
+        // Recursively propagate scene context to all pre-existing sub-objects
+        for (GraphMathObject *child : subGraphObjects)
+        {
+            child->on_added_to_scene(target_scene);
+        }
+}
+
+void GraphMathObject::add(GraphMathObject *sub_object)
+{
+    if (sub_object->parent != nullptr && sub_object->parent != this)
+    {
+        std::cerr << "Warning: Object " << sub_object->id << " already has a different parent. Reassigning parent." << std::endl;
+    }
+    sub_object->parent = this;
+    subGraphObjects.push_back(sub_object);
+
+    // If this object is already part of a scene, immediately register the new child
+    if (this->scene != nullptr)
+    {
+        sub_object->on_added_to_scene(this->scene);
+    }
+}
 
 int GraphMathObject::getPointsSize()
 {
@@ -84,8 +124,11 @@ void GraphMathObject::moveTo(Position pos)
     case Position::BOTTOM_RIGHT:
         translate = glm::vec3(x + width, y - height, 0);
         break;
-    case Position::NONE:
+    case Position::CENTER:
         translate = glm::vec3(x + width / 2, y - height / 2, 0);
+        break;
+    case Position::NONE: 
+        translate = glm::vec3(x, y, 0);
         break;
     }
 
@@ -413,4 +456,21 @@ void GraphMathObject::setAllBezierPoints(const std::vector<glm::vec3> &pts)
         bezier_dirty = true;
         build_points_from_bezier();
     }
+}
+void GraphMathObject::updateDimensions()
+{
+    if (points.empty()) return;
+    float minx = std::numeric_limits<float>::max(), maxX = -std::numeric_limits<float>::max();
+    float minY = std::numeric_limits<float>::max(), maxY = -std::numeric_limits<float>::max();
+    for (const auto &p : points)
+    {
+        minx = std::min(minx, p.x);
+        maxX = std::max(maxX, p.x);
+        minY = std::min(minY, p.y);
+        maxY = std::max(maxY, p.y);
+    }
+    x = minx;
+    y = maxY;
+    width = maxX - minx;
+    height = maxY - minY;
 }

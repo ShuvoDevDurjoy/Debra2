@@ -1,4 +1,5 @@
 #include "../../../include/GraphEngine/Graphs/GraphObjects/ThreeDObject.hpp"
+#include "../../../include/GraphEngine/Scene/Graph.hpp"
 
 void ThreeDObject::Init(float dt)
 {
@@ -311,20 +312,26 @@ void ThreeDObject::updateStroke(float dt){
     if (stroke_shader) {
         stroke_shader->use();
 
+        glm::mat4 view(1.0f), projection(1.0f);
+        glm::vec3 camPos(0, 0, 100);
+        if (scene && scene->getCamera()) {
+            view = scene->getCamera()->getViewMatrix();
+            projection = scene->getCamera()->getProjectionMatrix();
+            camPos = scene->getCamera()->getPosition();
+        }
+
         stroke_shader->setMat4("model", model);
-        stroke_shader->setMat4("view", GraphApp::view);
-        stroke_shader->setMat4("projection", GraphApp::projection);
+        stroke_shader->setMat4("view", view);
+        stroke_shader->setMat4("projection", projection);
 
         stroke_shader->setFloat("u_progress", fillProgress);
         stroke_shader->setInt("triangle_count", getFillsize() / 3);
         stroke_shader->setFloat("stroke_line_width", line_width);
         stroke_shader->setInt("vertices_increment_count", ((resolution.first - 1) * 2));
 
-        glm::vec3 cameraPos = GraphApp::cameraPos;
-
         stroke_shader->setVec3("objectColor", 1, 0.67, 0.67);
-        stroke_shader->setVec3("lightPos", cameraPos);
-        stroke_shader->setVec3("viewPos", cameraPos);
+        stroke_shader->setVec3("lightPos", camPos);
+        stroke_shader->setVec3("viewPos", camPos);
         stroke_shader->setVec3("lightColor", 0.5, 0.5, 0.5);
 
         glBindVertexArray(StrokeVAO);
@@ -336,20 +343,26 @@ void ThreeDObject::updateFill(float dt){
     if (showFill && fill_shader) {
         fill_shader->use();
 
+        glm::mat4 view(1.0f), projection(1.0f);
+        glm::vec3 camPos(0, 0, 100);
+        if (scene && scene->getCamera()) {
+            view = scene->getCamera()->getViewMatrix();
+            projection = scene->getCamera()->getProjectionMatrix();
+            camPos = scene->getCamera()->getPosition();
+        }
+
         fill_shader->setMat4("model", model);
-        fill_shader->setMat4("view", GraphApp::view);
-        fill_shader->setMat4("projection", GraphApp::projection);
+        fill_shader->setMat4("view", view);
+        fill_shader->setMat4("projection", projection);
 
         fill_shader->setFloat("u_progress", fillProgress);
         fill_shader->setInt("triangle_count", getFillsize() / 3);
         fill_shader->setFloat("stroke_line_width", line_width);
         fill_shader->setInt("vertices_increment_count", ((resolution.first - 1) * 2));
 
-        glm::vec3 cameraPos = GraphApp::cameraPos;
-
         fill_shader->setVec3("objectColor", 1, 0.67, 0.67);
-        fill_shader->setVec3("lightPos", cameraPos);
-        fill_shader->setVec3("viewPos", cameraPos);
+        fill_shader->setVec3("lightPos", camPos);
+        fill_shader->setVec3("viewPos", camPos);
         fill_shader->setVec3("lightColor", 0.5, 0.5, 0.5);
 
         glBindVertexArray(FillVAO);

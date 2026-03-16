@@ -48,7 +48,6 @@ public:
         }
 
         setDimension(world_min, world_max, y_pos - tick_height, y_pos + tick_height);
-        build_points_from_bezier();
     }
 
     void add_label(float label_size = 5.0f, float buff = 0.0f, int precision = 2)

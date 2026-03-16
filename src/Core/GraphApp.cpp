@@ -2,17 +2,16 @@
 
 KeyEventManager *GraphApp::keyManager;
 MouseEventListener *GraphApp::mouseEventMangager;
-glm::mat4 GraphApp::view, GraphApp::projection;
-glm::vec3 GraphApp::cameraPos;
-glm::vec3 GraphApp::camera_center = glm::vec3(0, 0, 0);
 float GraphApp::lastX = 0, GraphApp::lastY = 0, GraphApp::rotX = 0, GraphApp::rotY = 0;
 int GraphApp::drawCount = 0;
 int GraphApp::window_width = 1200;
 int GraphApp::window_height = 600;
 
-GraphApp::GraphApp()
+GraphApp::GraphApp(int width, int height)
 {
     // window_height = 570;
+    window_width = width;
+    window_height = height;
     InitWindow();
     loadGLAD();
     InitTextRenderer();
@@ -46,28 +45,7 @@ int GraphApp::InitWindow()
     // create window
     window = glfwCreateWindow(window_width, window_height, "Debra", nullptr, nullptr);
 
-    cameraPos = glm::vec3(0.0f, 0.0f, 100.0f);
-    view = glm::lookAt(
-        glm::vec3(cameraPos[0], cameraPos[1], cameraPos[2]),
-        glm::vec3(0.0f, 0.0f, 0.0f),
-        glm::vec3(0.0f, 1.0f, 0.0f));
-
-    // Projection
-    std::cout << "(window width: )" << (window_width) << std::endl;
-
-    float hFOV = 2.0f * atan((200 / 2.0f) / cameraPos.z);
-
-    float aspect = (window_width * 1.0f) / (window_height * 1.0f);
-
-    // 2. GLM uses Vertical FOV, so we must convert it
-    // vFOV = 2 * atan( tan(hFOV/2) / aspect )
-    float vFOV = 2.0f * atan(tan(hFOV / 2.0f) / aspect);
-    // Projection
-    projection = glm::perspective(
-        vFOV,
-        aspect, // replace with window ratio if needed
-        0.1f,
-        500.0f);
+    // Initial setup handled by Graph constructor
 
     // check if the window is created successfully or return out of the programe terminating the glfw
     if (!window)
@@ -148,8 +126,11 @@ void GraphApp::setCallback()
 
 bool GraphApp::isAlive = true;
 
-void GraphApp::mainLoop(Graph *graph)
+Scene* currentGraph = nullptr;
+
+void GraphApp::mainLoop(Scene *graph)
 {
+    currentGraph = graph;
     glfwSwapInterval(1); // Enable V-Sync
     // glEnable(GL_DEPTH_TEST);
     double lastFrameTime = glfwGetTime();
@@ -171,7 +152,7 @@ void GraphApp::mainLoop(Graph *graph)
     }
 }
 
-void GraphApp::cleanUp(Graph *graph)
+void GraphApp::cleanUp(Scene *graph)
 {
     glDeleteBuffers(1, &VBO);
     glDeleteVertexArrays(1, &VAO);
@@ -197,7 +178,7 @@ void GraphApp::setColor(float r, float g, float b)
     shader->setVec3("color", r, g, b);
 }
 
-void GraphApp::run(Graph *graph)
+void GraphApp::run(Scene *graph)
 {
     mainLoop(graph);
     cleanUp(graph);
@@ -205,80 +186,69 @@ void GraphApp::run(Graph *graph)
 
 void GraphApp::onMouseMoveCallback(MouseEvent event) 
 {
-    if (event.key == GLFW_MOUSE_BUTTON_LEFT && event.action == GLFW_PRESS)
+    // Touchpad control: left-drag pans the camera
+    if (currentGraph && currentGraph->getControlMode() == Scene::ControlMode::TOUCHPAD_CONTROL)
     {
-        // First click initialization
-        if (lastX < 0 || lastY < 0)
+        if (event.key == GLFW_MOUSE_BUTTON_LEFT && event.action == GLFW_PRESS)
         {
+            if (lastX < 0 || lastY < 0) { lastX = event.positionX; lastY = event.positionY; return; }
+
+            float dx = event.positionX - lastX;
+            float dy = event.positionY - lastY;
             lastX = event.positionX;
             lastY = event.positionY;
-            return;
-        }
 
+            // Scale drag pixels → world units proportional to zoom distance
+            Camera* cam = currentGraph->getCamera();
+            float zDist = glm::length(cam->getPosition() - cam->getCenter());
+            float panScale = zDist / (float)window_width;
+
+            glm::vec3 center = cam->getCenter();
+            center.x -= dx * panScale;
+            center.y += dy * panScale;
+            glm::vec3 pos = cam->getPosition();
+            pos.x -= dx * panScale;
+            pos.y += dy * panScale;
+            cam->setCenter(center);
+            cam->setPosition(pos);
+        }
+        else { lastX = -1; lastY = -1; }
+        return; // don't fall through to camera orbit logic
+    }
+
+    // Camera control: legacy orbit via drag (rotX/rotY still stored but not used by new Camera)
+    if (event.key == GLFW_MOUSE_BUTTON_LEFT && event.action == GLFW_PRESS)
+    {
+        if (lastX < 0 || lastY < 0) { lastX = event.positionX; lastY = event.positionY; return; }
         float dx = event.positionX - lastX;
         float dy = event.positionY - lastY;
-
         lastX = event.positionX;
         lastY = event.positionY;
-
-        // Map full screen drag → full rotation
-        float rotPerPixelX = 180.0f / event.windowHeight;
-        float rotPerPixelY = 180.0f / event.windowWidth;
-
-        rotX += dy * rotPerPixelX; // vertical drag → X axis
-        rotY += dx * rotPerPixelY; // horizontal drag → Y axis
-
-        // Optional: keep values bounded
-        rotX = fmod(rotX, 180.0f);
-        rotY = fmod(rotY, 180.0f);
-
+        rotX = fmod(rotX + dy * (180.0f / event.windowHeight), 180.0f);
+        rotY = fmod(rotY + dx * (180.0f / event.windowWidth),  180.0f);
     }
-    else
-    {
-        lastX = -1;
-        lastY = -1;
-    }
+    else { lastX = -1; lastY = -1; }
 }
 
 void GraphApp::onKeyPressedOnceCallback(const KeyEvent &event)
 {
-    float inc_thr = 2.0f;
-    if(cameraPos.z > 20)
-        inc_thr = 5.0f;
-    if (event.key == GLFW_KEY_F && cameraPos.z > 0)
-    {
-        cameraPos.z -= inc_thr;
-    }
-    else if (event.key == GLFW_KEY_B)
-    {
-        cameraPos.z += 2.0f;
-    }
-    else if (event.key == GLFW_KEY_UP)
-    {
-        camera_center.y -= 2.0f;
-    }
-    else if (event.key == GLFW_KEY_DOWN)
-    {
-        camera_center.y += 2.0f;
-    }
-    else if (event.key == GLFW_KEY_LEFT)
-    {
-        camera_center.x += 2.0f;
-    }
-    else if (event.key == GLFW_KEY_RIGHT)
-    {
-        camera_center.x -= 2.0f;
-    }
-    else if (event.key == GLFW_KEY_R)
-    {
-        cameraPos = glm::vec3(0.0f, 0.0f, 100.0f);
-        camera_center = glm::vec3(0, 0, 0);
-        rotX = 0;
-        rotY = 0;
-    }
+    if (!currentGraph || !currentGraph->getCamera()) return;
 
-    view = glm::lookAt(
-        glm::vec3(cameraPos[0] + camera_center.x, cameraPos[1] + camera_center.y, cameraPos[2]),
-        glm::vec3(camera_center.x, camera_center.y, camera_center.z),
-        glm::vec3(0.0f, 1.0f, 0.0f));
+    // Keyboard navigation only applies in CAMERA_CONTROL mode
+    if (currentGraph->getControlMode() != Scene::ControlMode::CAMERA_CONTROL) return;
+
+    Camera* cam = currentGraph->getCamera();
+    glm::vec3 pos = cam->getPosition();
+    glm::vec3 center = cam->getCenter();
+
+    if      (event.key == GLFW_KEY_F)     { pos.z -= 5.0f; }
+    else if (event.key == GLFW_KEY_B)     { pos.z += 5.0f; }
+    else if (event.key == GLFW_KEY_UP)    { center.y += 2.0f; }
+    else if (event.key == GLFW_KEY_DOWN)  { center.y -= 2.0f; }
+    else if (event.key == GLFW_KEY_LEFT)  { center.x -= 2.0f; }
+    else if (event.key == GLFW_KEY_RIGHT) { center.x += 2.0f; }
+    else if (event.key == GLFW_KEY_R)     { pos = glm::vec3(0,0,100); center = glm::vec3(0,0,0); }
+
+    cam->setPosition(pos);
+    cam->setCenter(center);
 }
