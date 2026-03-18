@@ -1,7 +1,7 @@
 #ifndef __CIRCLE_HPP__
 #define __CIRCLE_HPP__
 
-#include "BasePolygon.hpp"
+#include <GraphEngine/Graphs/GraphObjects/Shapes/BasePolygon.hpp>
 
 class Circle : public BasePolygon
 {

@@ -1,4 +1,4 @@
-#include "../../include/GraphEngine/Animations/Translate.hpp"
+#include <GraphEngine/Animations/Translate.hpp>
 
 Translate::Translate(GraphObject *object, glm::vec3 to, Position pos) : Animation(object)
 {

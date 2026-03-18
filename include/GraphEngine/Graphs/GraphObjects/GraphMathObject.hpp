@@ -1,19 +1,20 @@
 #ifndef __GRAPHMATHOBJECT_HPP__
 #define __GRAPHMATHOBJECT_HPP__
 
-#include <iostream>
-#include <algorithm>
+#include <cmath>
 #include <vector>
 #include <climits>
-#include <cmath>
-#include <unordered_map>
+#include <iostream>
+#include <algorithm>
 #include <functional>
+#include <unordered_map>
 
-#include "../../Utils/Config.hpp"
-#include "../../Utils/GraphColor.hpp"
-#include "../../Core/Shader.hpp"
-#include "../../../glm/glm.hpp"
-#include "../../../glm/gtc/matrix_transform.hpp"
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+
+#include <GraphEngine/Core/Shader.hpp>
+#include <GraphEngine/Utils/Config.hpp>
+#include <GraphEngine/Utils/GraphColor.hpp>
 
 class Scene;
 

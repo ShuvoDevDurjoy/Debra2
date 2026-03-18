@@ -2,7 +2,7 @@
 #define __GRAPHCOLOR__HPP__
 
 #include <stdlib.h>
-#include "../../glm/glm.hpp"
+#include <glm/glm.hpp>
 
 class GraphColor
 {

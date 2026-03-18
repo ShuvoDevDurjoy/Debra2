@@ -2,10 +2,11 @@
 #define __TRANSITION_HPP__
 
 
-#include "Animation.hpp"
-#include "AnimationManager.hpp"
-#include "Fade.hpp"
-#include "Creation.hpp"
+
+#include <GraphEngine/Animations/Fade.hpp>
+#include <GraphEngine/Animations/Creation.hpp>
+#include <GraphEngine/Animations/Animation.hpp>
+#include <GraphEngine/Animations/AnimationManager.hpp>
 
 
 class Transition: public Animation{

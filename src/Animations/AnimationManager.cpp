@@ -1,4 +1,4 @@
-#include "../../include/GraphEngine/Animations/AnimationManager.hpp"
+#include <GraphEngine/Animations/AnimationManager.hpp>
 
 std::queue<Animation *> AnimationManager::animationObjectQueue;
 std::unordered_set<Animation *> AnimationManager::animationObjectSet;

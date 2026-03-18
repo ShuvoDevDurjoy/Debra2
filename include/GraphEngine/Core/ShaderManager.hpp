@@ -1,9 +1,9 @@
 #ifndef __SHADER_MANAGER_HPP__
 #define __SHADER_MANAGER_HPP__
 
-#include <unordered_map>
 #include <string>
-#include "Shader.hpp"
+#include <unordered_map>
+#include <GraphEngine/Core/Shader.hpp>
 
 class ShaderManager {
 private:

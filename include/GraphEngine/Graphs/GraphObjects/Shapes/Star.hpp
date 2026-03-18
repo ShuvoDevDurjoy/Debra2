@@ -1,7 +1,7 @@
 #ifndef __STAR_HPP__
 #define __STAR_HPP__
 
-#include "../GraphObject.hpp"
+#include <GraphEngine/Graphs/GraphObjects/GraphObject.hpp>
 
 class Star : public GraphObject
 {
@@ -26,7 +26,6 @@ public:
         add_line_to(anchors[0]);
 
         setDimension(x - outer_radius, x + outer_radius, y - outer_radius, y + outer_radius);
-        build_points_from_bezier();
     }
 };
 

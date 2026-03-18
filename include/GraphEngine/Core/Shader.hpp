@@ -1,13 +1,14 @@
 #ifndef SHADER_HPP
 #define SHADER_HPP
 
-#include <iostream>
+#include <string>
 #include <fstream>
 #include <sstream>
-#include <string>
+#include <iostream>
+
 #include <glad.h>
-#include <GraphEngine/Utils/Utils.hpp>
 #include <glm/glm.hpp>
+#include <GraphEngine/Utils/Utils.hpp>
 
 enum shaderTypes
 {

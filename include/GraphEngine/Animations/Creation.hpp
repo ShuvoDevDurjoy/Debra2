@@ -1,7 +1,7 @@
 #ifndef __CREATION_HPP__
 #define __CREATION_HPP__
 
-#include "Animation.hpp"
+#include <GraphEngine/Animations/Animation.hpp>
 
 class ShowCreation: public Animation{
 

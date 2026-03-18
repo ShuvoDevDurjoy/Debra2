@@ -1,5 +1,5 @@
-#include "../../../include/GraphEngine/Graphs/GraphObjects/GraphObject.hpp"
-#include "../../../include/GraphEngine/Core/ShaderManager.hpp"
+#include <GraphEngine/Core/ShaderManager.hpp>
+#include <GraphEngine/Graphs/GraphObjects/GraphObject.hpp>
 
 GraphObject::GraphObject()
     : StrokeVAO(0), StrokeVBO(0), FillVAO(0), FillVBO(0), CoverVAO(0), CoverVBO(0)
@@ -47,6 +47,7 @@ void GraphObject::updateStroke(float dt)
         stroke_shader->setVec3("lightPos", camPos.x, camPos.y, camPos.z);
         stroke_shader->setVec3("viewPos", camPos.x, camPos.y, camPos.z);
         stroke_shader->setFloat("u_thickness", 1.0f);
+        stroke_shader->setFloat("u_stroke_opacity", stroke_opacity);
         stroke_shader->setFloat("u_radius", 2.0f);
         stroke_shader->setVec2("uViewportSize", (float)GraphApp::window_width, (float)GraphApp::window_height);
         stroke_shader->setFloat("u_line_width", line_width);
@@ -617,9 +618,6 @@ void GraphObject::generatePoints(glm::vec3 (*func)(float, Var), Var v)
             add_cubic_bezier_curve_to(c1, c2, p2);
         }
     }
-
-    // Rely on the standard bezier building method
-    build_points_from_bezier();
 
     // Calculate extents for dimensions
     float minx = std::numeric_limits<float>::max(), maxX = -std::numeric_limits<float>::max();

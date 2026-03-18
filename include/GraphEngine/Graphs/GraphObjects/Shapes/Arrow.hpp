@@ -1,8 +1,8 @@
 #ifndef __ARROW_HPP__
 #define __ARROW_HPP__
 
-#include "../GraphObject.hpp"
-#include "../GraphGroup.hpp"
+
+#include <GraphEngine/Graphs/GraphObjects/GraphObject.hpp>
 
 // Arrow: a line with a filled arrowhead at the end.
 // It is a GraphGroup composed of a Line body and a Triangle tip.
@@ -42,7 +42,6 @@ public:
         float miny = std::min(start.y, end.y) - h_half;
         float maxy = std::max(start.y, end.y) + h_half;
         setDimension(minx, maxx, miny, maxy);
-        build_points_from_bezier();
 
         // Default to showing fill for a "solid" arrow look
         fillOpacity = 1.0f;

@@ -1,7 +1,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include <GraphEngine/Scene/Graph.hpp>
+#include <GraphEngine/Scene/Scene.hpp>
 
 #include <GraphEngine/Graphs/GraphObjects/TestObject.hpp>
 #include <GraphEngine/Graphs/GraphObjects/GraphObject.hpp>

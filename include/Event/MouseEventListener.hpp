@@ -1,32 +1,10 @@
 #pragma once
 
-#include "MouseEvents.hpp"
-#include <vector>
+#include <Event/MouseEvent.hpp>
+#include <Event/EventListener.hpp>
 
-class MouseEventListener{
-
-    private:
-        std::vector<MouseEvents *> listeners;
-
-    public: 
-        void registerListener(MouseEvents* listener){
-            listeners.push_back(listener);
-        }
-    
-
-        void mouseMoved(GLFWwindow* window, double xpos, double ypos){
-            int width = 0, height = 0;
-            glfwGetWindowSize(window, &width, &height);
-            glfwGetCursorPos(window, &xpos, &ypos);
-            for (MouseEvents *listener : listeners)
-            {
-                listener->onMouseMoved(xpos, ypos, width, height);
-            }
-        }
-
-        void mouseClicked(GLFWwindow* window, int key, int action, int mode){
-            for(MouseEvents *listener : listeners){
-                listener->onMouseClick(key, action, mode);
-            }
-        }
+class MouseEventListener : public EventListener<MouseEvent> {
+public:
+    virtual ~MouseEventListener() = default;
+    virtual void onEvent(MouseEvent& event) = 0;
 };

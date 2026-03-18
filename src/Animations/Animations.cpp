@@ -1,4 +1,4 @@
-#include "../../include/GraphEngine/Animations/Animation.hpp"
+#include <GraphEngine/Animations/Animation.hpp>
 
 Animation::Animation(GraphMathObject *object)
 {

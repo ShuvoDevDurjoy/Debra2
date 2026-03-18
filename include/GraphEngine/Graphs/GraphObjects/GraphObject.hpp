@@ -1,28 +1,24 @@
 #ifndef __GRAPHOBJECT_HPP__
 #define __GRAPHOBJECT_HPP__
 
-#include <iostream>
-#include <vector>
 #include <cmath>
-#include <algorithm>
 #include <limits>
+#include <vector>
 #include <stdlib.h>
+#include <iostream>
+#include <algorithm>
 #include <functional>
 
-#include "../../Utils/GraphColor.hpp"
-#include "../../Utils/Config.hpp"
+#include <earcut.hpp>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
-#include "../../Core/Shader.hpp"
+#include <GraphEngine/Core/Shader.hpp>
+#include <GraphEngine/Utils/Config.hpp>
 #include <GraphEngine/Core/GraphApp.hpp>
+#include <GraphEngine/Utils/GraphColor.hpp>
+#include <GraphEngine/Utils/intersection_helper.hpp>
 #include <GraphEngine/Graphs/GraphObjects/GraphMathObject.hpp>
-
-// glm library header to handle matrix
-#include "../../../glm/glm.hpp"
-#include "../../../glm/gtc/matrix_transform.hpp"
-
-//third party lirary to handle the earcut of fill points
-#include "../../../earcut.hpp"
-#include "../../Utils/intersection_helper.hpp"
 
 using Point2D = std::pair<float, float>;
 using Polygonn = std::vector<std::vector<Point2D>>;

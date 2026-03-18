@@ -1,4 +1,4 @@
-#include "../../include/GraphEngine/Core/Shader.hpp"
+#include <GraphEngine/Core/Shader.hpp>
 
 Shader::Shader(const std::string &vertexShaderFile, const std::string &fragmentShaderFile)
 {

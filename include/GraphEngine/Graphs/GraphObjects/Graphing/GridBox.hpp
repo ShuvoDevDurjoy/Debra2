@@ -1,9 +1,8 @@
 #ifndef __GRIDBOX_HPP__
 #define __GRIDBOX_HPP__
 
-#include "../GraphObject.hpp"
-#include "../GraphGroup.hpp"
-#include "Line.hpp"
+#include <GraphEngine/Graphs/GraphObjects/GraphObject.hpp>
+#include <GraphEngine/Graphs/GraphObjects/Graphing/Line.hpp>
 
 class GridBox : public GraphObject
 {

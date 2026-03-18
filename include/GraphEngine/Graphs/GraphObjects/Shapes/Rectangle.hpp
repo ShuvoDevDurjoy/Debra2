@@ -1,7 +1,7 @@
 #ifndef __RECTANGLE_SHAPE_HPP__
 #define __RECTANGLE_SHAPE_HPP__
 
-#include "../GraphObject.hpp"
+#include <GraphEngine/Graphs/GraphObjects/GraphObject.hpp>
 
 class Rectangle : public GraphObject
 {

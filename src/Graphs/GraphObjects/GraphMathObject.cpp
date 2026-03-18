@@ -1,5 +1,5 @@
-#include "../../../include/GraphEngine/Graphs/GraphObjects/GraphMathObject.hpp"
-#include "../../../include/GraphEngine/Scene/Graph.hpp"
+#include <GraphEngine/Scene/Scene.hpp>
+#include <GraphEngine/Graphs/GraphObjects/GraphMathObject.hpp>
 
 long long GraphMathObject::next_id = 0;
 

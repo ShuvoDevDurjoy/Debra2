@@ -1,5 +1,5 @@
-#include "../include/GraphEngine/Graphs/GraphObjects/Shapes/Text.hpp"
-#include "../include/GraphEngine/Core/GraphApp.hpp"
+#include <GraphEngine/Core/GraphApp.hpp>
+#include <GraphEngine/Graphs/GraphObjects/Shapes/Text.hpp>
 
 // FreeType loads the font at this pixel size:
 // glyph coordinates are in 1/64th-pixel units, so the full range is

@@ -1,12 +1,13 @@
 #ifndef __CAMERA_ANIMATION_HPP__
 #define __CAMERA_ANIMATION_HPP__
 
-#include "Animation.hpp"
-#include "../Camera/Camera.hpp"
 #include <GraphEngine/Scene/Scene.hpp>
+#include <GraphEngine/Camera/Camera.hpp>
+#include <GraphEngine/Animations/Animation.hpp>
 
 class CameraAnimation {
     friend class Scene;
+    friend class ICameraAnimatable;
 
 private:
     Camera* camera;

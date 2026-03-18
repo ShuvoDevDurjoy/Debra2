@@ -1,4 +1,4 @@
-#include "../../include/GraphEngine/Animations/CameraAnimation.hpp"
+#include <GraphEngine/Animations/CameraAnimation.hpp>
 
 float easeInOutSine(float t) {
     return -0.5f * (cos(3.14159265359f * t) - 1.0f);

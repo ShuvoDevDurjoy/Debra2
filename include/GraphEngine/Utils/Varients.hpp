@@ -1,9 +1,9 @@
 #ifndef __VARIENTS__HPP__
 #define __VARIENTS__HPP__
 
-#include <variant>
 #include <vector>
-#include "../Math/Var.hpp"
+#include <variant>
+#include <GraphEngine/Math/Var.hpp>
 
 // variant that let the user to input both (float) or (float, Var) function reference
 // for cartesian curve

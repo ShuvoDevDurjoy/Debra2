@@ -1,4 +1,4 @@
-#include "../../include/GraphEngine/Graphs/GraphObjects/ThreeDAxes.hpp"
+#include <GraphEngine/Graphs/GraphObjects/ThreeDAxes.hpp>
 
 
 ThreeDAxes::ThreeDAxes(){

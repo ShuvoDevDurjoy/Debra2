@@ -29,6 +29,7 @@
 out vec4 FragColor;
 
 uniform vec3 objectColor;
+uniform float u_stroke_opacity;
 
 in float pProgress;
 in float progress;
@@ -133,6 +134,8 @@ void runMain(){
     alpha = clamp(alpha, 0.0, 1.0);
     
     if(alpha <= 0.01) discard;
+
+    alpha = alpha * u_stroke_opacity;
 
     // Output with proper color
     FragColor = vec4(outColor, alpha);

@@ -1,4 +1,4 @@
-#include "../../include/GraphEngine/Animations/Transition.hpp"
+#include <GraphEngine/Animations/Transition.hpp>
 
 Transition::Transition(GraphMathObject *object, GraphMathObject *targetObj) : Animation(object, targetObj)
 {
@@ -89,6 +89,9 @@ void Transition::play(float dt)
     {
         morphObject->showGraph = false;
         morphObject->showFill = false;
+        morphObject->showStroke = true;
+        targetObject->showStroke = true;
+        targetObject->showGraph = true;
         std::cout << "Initializing Transition Animation" << std::endl;
         Init();
     }

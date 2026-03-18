@@ -1,7 +1,7 @@
 #ifndef __TRANSLATE_HPP__
 #define __TRANSLATE_HPP__
 
-#include "Animation.hpp"
+#include <GraphEngine/Animations/Animation.hpp>
 
 class Translate: public Animation{
     public:

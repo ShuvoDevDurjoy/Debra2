@@ -1,7 +1,7 @@
 #ifndef __BASE_POLYGON_HPP__
 #define __BASE_POLYGON_HPP__
 
-#include "../GraphObject.hpp"
+#include <GraphEngine/Graphs/GraphObjects/GraphObject.hpp>
 
 class BasePolygon : public GraphObject
 {
@@ -110,7 +110,6 @@ public:
         close_path();
 
         setDimension(minx, maxX, minY, maxY);
-        build_points_from_bezier();
     }
 };
 

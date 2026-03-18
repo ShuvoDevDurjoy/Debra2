@@ -43,6 +43,7 @@ public:
     // Specialized Logic
     void focusOn(GraphMathObject* obj, float padding = 1.2f);
     void rotateAround(glm::vec3 target, float angleDeg, glm::vec3 axis);
+    void zoom(float factor);
 };
 
 #endif

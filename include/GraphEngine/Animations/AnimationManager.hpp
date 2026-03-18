@@ -1,11 +1,11 @@
 #ifndef __ANIMATION_MANAGER_HPP__
 #define __ANIMATION_MANAGER_HPP__
 
-#include "../Graphs/GraphObjects/GraphObject.hpp"
-#include "Animation.hpp"
+#include <queue>
 #include <vector>
 #include <unordered_set>
-#include <queue>
+#include <GraphEngine/Animations/Animation.hpp>
+#include <GraphEngine/Graphs/GraphObjects/GraphMathObject.hpp>
 class GraphObject;
 class Animation;
 

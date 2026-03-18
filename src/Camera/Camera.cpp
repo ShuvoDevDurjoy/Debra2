@@ -1,7 +1,7 @@
-#include "../../include/GraphEngine/Camera/Camera.hpp"
-#include "../../include/GraphEngine/Graphs/GraphObjects/GraphMathObject.hpp"
-#include <algorithm>
 #include <cmath>
+#include <algorithm>
+#include <GraphEngine/Camera/Camera.hpp>
+#include <GraphEngine/Graphs/GraphObjects/GraphMathObject.hpp>
 
 Camera::Camera(glm::vec3 pos, glm::vec3 target, glm::vec3 upDir)
     : position(pos), center(target), up(upDir), 
@@ -46,5 +46,11 @@ void Camera::rotateAround(glm::vec3 target, float angleDeg, glm::vec3 axis) {
     glm::vec3 relativePos = position - target;
     position = glm::vec3(rotation * glm::vec4(relativePos, 1.0f)) + target;
     center = target;
+    updateMatrices();
+}
+
+void Camera::zoom(float factor) {
+    glm::vec3 relativePos = position - center;
+    position = center + relativePos * factor;
     updateMatrices();
 }

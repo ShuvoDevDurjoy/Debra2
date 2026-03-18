@@ -1,7 +1,7 @@
 #ifndef __FADE_HPP__
 #define __FADE_HPP__
 
-#include "Animation.hpp"
+#include <GraphEngine/Animations/Animation.hpp>
 
 // FadeIn: animates fillOpacity and strokeOpacity from 0 to 1 over the duration.
 class FadeIn : public Animation {
@@ -28,8 +28,8 @@ public:
 // FadeOut: animates fillOpacity and strokeOpacity from 1 to 0 over the duration.
 class FadeOut : public Animation {
 public:
-    FadeOut(GraphMathObject* object)
-        : Animation(object) {}
+    FadeOut(GraphMathObject *object)
+        : Animation(object) { is_initialized = true; }
 
     void play(float dt) override {
         if (dt < start_time) return;

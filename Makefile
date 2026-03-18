@@ -10,7 +10,7 @@ CFLAGS   = -Wall -O2
 ifeq ($(OS),Windows_NT)
     LDFLAGS = -lglfw3dll -lgdi32 -lopengl32 -luser32 -lkernel32 -lwinmm
 else
-    LDFLAGS = -lglfw -lGL -lpthread -ldl -lfreetype
+    LDFLAGS = -lglfw -lGL -lpthread -ldl -lfreetype -lSDL2
 endif
 
 # Directories

@@ -1,4 +1,4 @@
-#include "../../include/GraphEngine/Animations/Creation.hpp"
+#include <GraphEngine/Animations/Creation.hpp>
 
 void ShowCreation::Init()
 {

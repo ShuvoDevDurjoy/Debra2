@@ -1,5 +1,5 @@
-#include "../../../include/GraphEngine/Graphs/GraphObjects/ThreeDObject.hpp"
-#include "../../../include/GraphEngine/Scene/Graph.hpp"
+#include <GraphEngine/Scene/Scene.hpp>
+#include <GraphEngine/Graphs/GraphObjects/ThreeDObject.hpp>
 
 void ThreeDObject::Init(float dt)
 {

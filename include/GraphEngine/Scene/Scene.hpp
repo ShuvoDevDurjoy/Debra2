@@ -12,12 +12,13 @@
 #include <GraphEngine/Math/Var.hpp>
 #include <GraphEngine/Core/Shader.hpp>
 #include <GraphEngine/Camera/Camera.hpp>
-#include <GraphEngine/Rendering/Font.hpp>
 #include <GraphEngine/Utils/GraphColor.hpp>
 #include <GraphEngine/Utils/AnimationMode.hpp>
 #include <GraphEngine/Animations/Animation.hpp>
 #include <GraphEngine/Animations/CameraAnimation.hpp>
 #include <GraphEngine/Animations/AnimationManager.hpp>
+
+#include <GraphEngine/Scene/ControlPolicies.hpp>
 
 class GraphApp;
 class Animation;
@@ -25,67 +26,77 @@ class GraphObject;
 class GraphMathObject;
 class CameraAnimation;
 
+/**
+ * Base Scene class handling common state and rendering.
+ */
 class Scene
 {
-
-public:
-    enum class ControlMode
-    {
-        CAMERA_CONTROL,  // Keyboard: F/B zoom, arrows pan, R reset
-        TOUCHPAD_CONTROL // Mouse drag: left drag to pan, scroll to zoom
-    };
-
 private:
     bool scene_instantiated = false;
 
-private:
+protected:
     float time_stamp = 0.0f;
-    ControlMode controlMode;
-
-private:
     std::vector<GraphMathObject *> graphs;
     std::vector<Animation *> animations;
     std::vector<CameraAnimation *> camera_animations;
     std::vector<GraphMathObject *> flat_scene_registry;
 
-private:
     GraphApp *app;
     GLFWwindow *window;
     Camera *camera;
 
     friend class GraphApp;
+    friend class ICameraAnimatable;
+    friend class ManualControl;
+    friend class CameraControl;
 
 protected:
-    Scene(int width = 1200, int height = 600, ControlMode control_mode = ControlMode::TOUCHPAD_CONTROL);
+    Scene(int width = 1200, int height = 600);
+    virtual ~Scene();
 
-private:
     static void frame_size_buffer_callback(GLFWwindow *, int, int);
-
     void draw(float);
 
 public:
-    // --- Singleton Access Point ---
-    ~Scene() {};
-
     void InitGraphs();
-
-    bool scene_exists()
-    {
-        return scene_instantiated;
-    }
-    ControlMode getControlMode() const { return controlMode; }
+    bool scene_exists() { return scene_instantiated; }
     Camera *getCamera() { return camera; }
+    float getTime() const { return time_stamp; }
+    
     void timeProgress(float t)
     {
         this->time_stamp += t;
         this->time_stamp = std::max(0.0f, this->time_stamp);
     }
+    
     void run();
 
-public:
     void register_object(GraphMathObject *obj);
     void play(Animation *animation, float duration = 2.0f);
     void play(std::vector<Animation *> anims, float duration = 2.0f);
-    void play(CameraAnimation *camera_animation, float start_time, float duration);
     void add(GraphMathObject *graph);
+};
+
+// --- Specialized Scene Templates ---
+
+template <typename TControlPolicy>
+class TwoDScene : public Scene, public TControlPolicy {
+public:
+    using Scene::play;
+
+    TwoDScene(int width = 1200, int height = 600) : Scene(width, height) {
+        camera->setPerspective(45.0f, (float)width/(float)height, 0.1f, 1000.0f);
+    }
+    virtual ~TwoDScene() = default;
+};
+
+template <typename TControlPolicy>
+class ThreeDScene : public Scene, public TControlPolicy {
+public:
+    using Scene::play;
+
+    ThreeDScene(int width = 1200, int height = 600) : Scene(width, height) {
+        camera->setPerspective(45.0f, (float)width/(float)height, 0.1f, 1000.0f);
+    }
+    virtual ~ThreeDScene() = default;
 };

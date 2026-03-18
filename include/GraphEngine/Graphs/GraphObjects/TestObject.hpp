@@ -1,7 +1,6 @@
-#ifndef __TESTOBJECT_HPP__
-#define __TESTOBJECT_HPP__
+#pragma once
 
-#include "GraphObject.hpp"
+#include <GraphEngine/Graphs/GraphObjects/GraphObject.hpp>
 
 class TestObject: public GraphObject{
     public: 
@@ -24,5 +23,3 @@ class TestObject: public GraphObject{
             fragmentShaderPath = s3;
         }
 };
-
-#endif

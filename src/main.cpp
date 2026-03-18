@@ -1,4 +1,5 @@
 #include "Debra.hpp"
+#include <AudioEngine/Sound.hpp>
 
 glm::vec3 generate(float r, float t, Var v)
 {
@@ -83,151 +84,45 @@ glm::vec3 PetalSpiral(float t, float dt)
     return glm::vec3(x, y, z);
 };
 
-auto SpiralRise = [](float t, float dt) -> glm::vec3
-{
-    float x = t * 50.0f;
-    float radius = 3.0f + 2.0f * sin(dt * 0.5f);
-    float angle = x * 0.3f + dt;
-    float y = radius * sin(angle) + 0.5f * sin(dt);
-    float z = radius * cos(angle) + 0.5f * cos(dt);
-    return glm::vec3(x, y, z);
-};
 
-// 9️⃣ Waving sine tube
-auto WavingTube = [](float t, float dt) -> glm::vec3
-{
-    float x = t * 50.0f;
-    float baseRadius = 4.0f;
-    float y = (baseRadius + sin(dt * 2.0f)) * sin(x - dt * 1.5f);
-    float z = (baseRadius + cos(dt * 2.5f)) * cos(x - dt * 1.5f);
-    return glm::vec3(x, y, z);
-};
-
-// 🔟 Twisting ribbon with oscillation
-auto TwistingRibbon = [](float t, float dt) -> glm::vec3
-{
-    float x = t * 50.0f;
-    float y = 5.0f * sin(x - dt * 1.8f) + 2.0f * sin(dt);
-    float z = 10.0f * cos(x - dt * 2.0f) + 1.0f * sin(dt * 1.5f);
-    return glm::vec3(x, y, z);
-};
-
-// Growing sine wave from origin
-auto GrowingSine = [](float t, float dt) -> glm::vec3
-{
-    // Controls
-    const float growSpeed = 2.0f; // units per second along X
-    const float amplitude = 5.0f;
-    const float frequency = 1.0f; // cycles per unit
-
-    // How much of the curve exists at this time
-    float maxX = growSpeed * dt;
-
-    // If this part of curve is not yet revealed, clamp to origin
-    if (t > maxX)
-        return glm::vec3(maxX, 0.0f, 0.0f);
-
-    float x = t;
-    float y = amplitude * sin(2.0f * M_PI * frequency * t);
-
-    return glm::vec3(x, y, 0.0f);
-};
-
-// 12️⃣ Rolling sine wave
-auto RollingWave = [](float t, float dt) -> glm::vec3
-{
-    float x = t * 50.0f;
-    float y = 5.0f * sin(x - dt * 1.5f) + 0.5f * cos(x * 0.3f + dt);
-    float z = 5.0f * cos(x - dt * 1.5f) + 0.5f * sin(x * 0.2f + dt);
-    return glm::vec3(x, y, z);
-};
-
-// 13️⃣ Corkscrew motion
-auto Corkscrew = [](float t, float dt) -> glm::vec3
-{
-    float z = t * 30;
-    float angle = z * 0.5f + dt * 2.0f;
-    float x = z * 0.5 * cos(angle);
-    // float y = radius * cos(angle);
-    float y = z * 0.5 * sin(angle);
-    // float z = radius * sin(angle);
-    return glm::vec3(x, y, z);
-};
-
-// 14️⃣ Ocean wave ripple
-auto OceanRipple = [](float t, float dt) -> glm::vec3
-{
-    float x = t * 50.0f;
-    float y = 3.0f * sin(x * 0.5f - dt) + 2.0f * sin(dt * 0.8f);
-    float z = 3.0f * cos(x * 0.4f - dt) + 2.0f * cos(dt * 0.6f);
-    return glm::vec3(x, y, z);
-};
-
-// 15️⃣ Infinity loop wave
-auto InfinityWave = [](float t, float dt) -> glm::vec3
-{
-    float x = t * 50.0f;
-    float y = 5.0f * sin(x - dt * 1.2f) + 5.0f * sin(x * 0.5f - dt * 0.8f);
-    float z = 5.0f * cos(x - dt * 1.2f) - 5.0f * cos(x * 0.5f - dt * 0.8f);
-    return glm::vec3(x, y, z);
-};
-
-glm::vec3 chaoticFractal(float t, Var v)
-{
-    float x = sin(t) * cos(3 * t) + cos(t * t);
-    float y = cos(t) * sin(5 * t) - sin(t * t);
-    return {x * v[0], y * v[0], 0};
-}
-
-float amplitude = 6.0f;
-float sin_offset_left = -10.0f;
-float sin_offset_right = 10.0f;
-float circle_x_center = -40.0f;
-float duration = 30.0f;
-
-glm::vec3 sinGraph(float t, Var v){
-    float x = t;
-    float y = amplitude * sin(x);
-    return glm::vec3(x, y, 0);
-}
-
-glm::vec3 lineUpdater(float t, float dt){
-    float dis = (sin_offset_right - sin_offset_left) * M_PI;
-    if (t == 1)
-    {
-        float angle = 2.0f * M_PI * dt * (dis / (2.0f * M_PI));
-        float x = circle_x_center + amplitude * cos(angle);
-        float y = amplitude * sin(angle);
-
-        return glm::vec3(x, y, 0);
-    }
-    else{
-        return glm::vec3(circle_x_center, 0, 0);
-    }
-}
-
-glm::vec3 trackingLineUpdater(float t, float dt){
-    float dis = (sin_offset_right - sin_offset_left) * M_PI;
-    if(t==1){
-        float x = sin_offset_left * M_PI + dis * dt;
-        float y = amplitude * sin(x);
-        return glm::vec3(x, y, 0);
-    }
-    else{
-        float angle = 2.0f * M_PI * dt * ( dis / (2.0f * M_PI));
-        float x = circle_x_center + amplitude * cos(angle);
-        float y = amplitude * sin(angle);
-        return glm::vec3(x, y, 0);
-    }
-}
-
-
-class MainScene: public Scene{
+class MainScene: public TwoDScene<CameraControl>{
 
     public: 
-        MainScene(): Scene(1200, 600){
-            Circle* circ = new Circle(10, 0, 0);
+        using Scene::play;
+        using CameraControl::play;
+
+        MainScene(): TwoDScene<CameraControl>(1200, 600){
+
+            Circle* circ = new Circle(30, 0, 0);
             add(circ);
+
+            Line *line = new Line(glm::vec3(0, 0, 0), glm::vec3(30, 30, 0));
+            add(line);
+
+            Rectangle *rect = new Rectangle(30, 20, 0, 0);
+            add(rect);
+
+            Star *star = new Star(5, 5, 30, 0, 0);
+            add(star);
+
+            TestObject *test = new TestObject();
+            Var v;
+            v.addVar(8.0f);
+            v.addVar(8.0f);
+            test->range = {-6.5 * M_PI, 6.5 * M_PI};
+            test->generatePoints(butterflyCurve, v);
+            add(test);
+
+            timeProgress(5.0f);
+            Animation *trans = new Transition(line, test);
+            play(trans, 2.0f);
+            play(new FadeOut(line), 3);
+            play(new Transition(test, circ), 3);
+
+            CameraAnimation* anim = CameraAnimation::CreateOrbit(getCamera(), 360.0f, glm::vec3(0, 1, 0));
+            CameraAnimation *anim1 = new CameraAnimation(getCamera(), glm::vec3(0, 0, 30), glm::vec3(0, 0, 0));
+            // this->play(anim1, 5.0f, 5.0f);
+            this->play(anim, 0.0f, 5.0f);
         }
 };
 

@@ -1,5 +1,5 @@
-#include "../../include/GraphEngine/Core/ShaderManager.hpp"
 #include <iostream>
+#include <GraphEngine/Core/ShaderManager.hpp>
 
 ShaderManager* ShaderManager::instance = nullptr;
 
@@ -17,7 +17,6 @@ ShaderManager::~ShaderManager() {
 Shader* ShaderManager::getShader(const std::string& vertex, const std::string& fragment) {
     std::string key = vertex + "|" + fragment;
     if (shaderCache.find(key) == shaderCache.end()) {
-        std::cout << "Loading Shader: " << vertex << ", " << fragment << std::endl;
         shaderCache[key] = new Shader(vertex, fragment);
     }
     return shaderCache[key];
@@ -26,7 +25,6 @@ Shader* ShaderManager::getShader(const std::string& vertex, const std::string& f
 Shader* ShaderManager::getShader(const std::string& vertex, const std::string& geometry, const std::string& fragment) {
     std::string key = vertex + "|" + geometry + "|" + fragment;
     if (shaderCache.find(key) == shaderCache.end()) {
-        std::cout << "Loading Shader: " << vertex << ", " << geometry << ", " << fragment << std::endl;
         shaderCache[key] = new Shader(vertex, geometry, fragment);
     }
     return shaderCache[key];
