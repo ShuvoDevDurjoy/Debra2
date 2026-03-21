@@ -73,60 +73,131 @@ glm::vec3 circleEquation(float t, Var v){
     return glm::vec3(x, y, 0);
 }
 
-glm::vec3 PetalSpiral(float t, float dt)
+glm::vec3 PetalSpiral(float t, Var v)
 {
-    float speed = 1.0;
-    float z = t * 50.0f;
-    float angle = t * 50.0f + dt * speed;
-    float radius = 10.0f * sin(2.0f * t + dt * speed);
+    float speed = 5.0;
+    float z = t;
+    float angle = t + v[0] * speed;
+    float radius = 10.0f * sin(2.0f * t + v[0] * speed);
     float y = radius * sin(angle);
     float x = radius * cos(angle);
     return glm::vec3(x, y, z);
 };
 
+glm::vec3 sinGraph(float t, Var v){
+    float x = t;
+    float speed = 5.0f;
+    float phase = speed * v[0];
+    float y = 5.0f * sin(x * 0.5f + phase);
+    return glm::vec3(x, y, 0);
+}
 
-class MainScene: public TwoDScene<CameraControl>{
+void sinGraphUpdater(GraphObject* obj, float dt){
+    Var v(dt);
+    FunctionGraph *func = new FunctionGraph(sinGraph, {-20.0f * M_PI, 20.0f * M_PI, 0.2f}, v);
+    obj->become(func);
+}
 
-    public: 
+class MainScene: public TwoDScene<ManualControl>{
+
+public:
         using Scene::play;
-        using CameraControl::play;
+        // using CameraControl::play;
 
-        MainScene(): TwoDScene<CameraControl>(1200, 600){
+        MainScene(): TwoDScene<ManualControl>(1200, 600){
 
-            Circle* circ = new Circle(30, 0, 0);
-            add(circ);
+            std::vector<std::vector<glm::vec3>> p = {
+                {glm::vec3(-60, 20, 0),
+                 glm::vec3(-30, 10, 0),
+                 glm::vec3(0, 20, 0),
+                 glm::vec3(30, 10, 0),
+                 glm::vec3(60, 20, 0)},
+                {glm::vec3(-60, -20, 0),
+                 glm::vec3(-30, -10, 0),
+                 glm::vec3(0, -20, 0),
+                 glm::vec3(30, -10, 0),
+                 glm::vec3(60, -20, 0)}};
 
-            Line *line = new Line(glm::vec3(0, 0, 0), glm::vec3(30, 30, 0));
-            add(line);
+            Polygon *test = new Polygon(p);
 
-            Rectangle *rect = new Rectangle(30, 20, 0, 0);
-            add(rect);
-
-            Star *star = new Star(5, 5, 30, 0, 0);
-            add(star);
-
-            TestObject *test = new TestObject();
+            std::cout << test->getPointsSize() << std::endl;
             Var v;
-            v.addVar(8.0f);
-            v.addVar(8.0f);
-            test->range = {-6.5 * M_PI, 6.5 * M_PI};
-            test->generatePoints(butterflyCurve, v);
+            FunctionGraph *func = new FunctionGraph(sinGraph, {-20 * M_PI, 20 * M_PI, 0.2f}, v);
+            // func->setUpdater(sinGraphUpdater, 3.0f, -1.0f);
+
+            Rectangle *rect = new Rectangle();
+            Circle *circ = new Circle(20, 0, 0);
             add(test);
+            add(func);
+            add(rect);
+            add(circ);
+            circ->setColor({GraphColor(1, 0, 0)});
+            std::cout << circ->layer << std::endl;
 
-            timeProgress(5.0f);
-            Animation *trans = new Transition(line, test);
-            play(trans, 2.0f);
-            play(new FadeOut(line), 3);
-            play(new Transition(test, circ), 3);
+            Text *text = new Text("Shuvo Dev", -30, -30, 10.0f);
+            add(text);
+            Text *text2 = new Text("This is Debra Graph Engine", -60, 30, 10.0f);
+            add(text2);
 
-            CameraAnimation* anim = CameraAnimation::CreateOrbit(getCamera(), 360.0f, glm::vec3(0, 1, 0));
-            CameraAnimation *anim1 = new CameraAnimation(getCamera(), glm::vec3(0, 0, 30), glm::vec3(0, 0, 0));
-            // this->play(anim1, 5.0f, 5.0f);
-            this->play(anim, 0.0f, 5.0f);
+            NumberLine *num = new NumberLine(-20.0f * M_PI, 20.0f * M_PI, M_PI * 2.0f, 2.0f);
+            // num->add_label(1.5f);
+            add(num);
+
+            // Transition *trans = new Transition(test, func);
+            // timeProgress(1);
+            // play(trans, 2);
+
         }
 };
 
+glm::vec3 sinSurface(float rho, float theta, Var var)
+{
+    float time = var[0];
+
+    float x = rho * cos(theta) * theta * rho;
+    float z = rho * sin(theta) ;
+
+    float y = 5.0f * sin(rho * 0.2f + time);
+
+    return glm::vec3(x, y, z);
+}
+
+void sinSurfaceUpdater(ThreeDObject* obj, float dt){
+    obj->graph_var = Var(dt * 5.0f);
+    obj->generatePoints();
+    obj->updatePoints();
+}
+
+class Demo3DScene : public TwoDScene<ManualControl> {
+public:
+    Demo3DScene() : TwoDScene<ManualControl>(1200, 600, 50.0f) {
+        // 1. Circle with new constructor
+        Circle *c1 = new Circle(4, 0, 0, 0);
+        c1->setColor({GraphColor(1, 0, 0)});
+        // c1->setStrokeWidth(10.0f);
+        add(c1);
+
+        Rectangle *rect = new Rectangle(10, 10, 0, 0);
+        rect->setStrokeWidth(10.0f);
+        rect->setColor({GraphColor(1, 0, 0), GraphColor(0, 1, 0)});
+        add(rect);
+
+        NumberLine *num_line = new NumberLine(-25, 25, 5, 2, 0);
+        add(num_line);
+
+        Dot *dot = new Dot(0.2f);
+        dot->showStroke = true;
+        c1->showFill = true;
+        add(dot);
+
+        std::vector<std::vector<glm::vec3>> pp = {{glm::vec3(-10, -10, 0), glm::vec3(10, 10, 0), glm::vec3(10, -10, 0), glm::vec3(-10, -10, 0)}};
+
+        Polygon *poly = new Polygon(pp, true);
+        add(poly);
+    }
+};
 int main(){
-    MainScene* scene = new MainScene();
+    // MainScene* scene = new MainScene();
+    Demo3DScene* scene = new Demo3DScene();
     scene->run();
 }

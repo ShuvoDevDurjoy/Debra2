@@ -1,23 +1,43 @@
 #include <GraphEngine/Scene/Scene.hpp>
 #include <GraphEngine/Core/GraphApp.hpp>
 #include <GraphEngine/Scene/TouchpadControlStrategy.hpp>
+#include <GraphEngine/Core/Renderer.hpp>
 
 // --- Scene Implementation ---
 
-Scene::Scene(int width, int height) {
+Scene::Scene(int width, int height, float xUnits) {
     if(scene_instantiated){
         throw std::runtime_error("Only one Scene instance allowed!");
     }
-    app = new GraphApp(width, height);
+    app = new GraphApp(width, height, xUnits);
     this->window = app->getWindow();
-    camera = new Camera(glm::vec3(0, 0, 100), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
-    camera->setAspect((float)width / (float)height);
+    
+    float aspect = (float)width / (float)height;
+    f_width = xUnits;
+    f_height = f_width / aspect;
+    x_radius = f_width / 2.0f;
+    y_radius = f_height / 2.0f;
+
+    // Update global alignment constants for the current scene scale
+    TOP_VEC = glm::vec3(0, y_radius, 0);
+    BOTTOM_VEC = glm::vec3(0, -y_radius, 0);
+    LEFT_VEC_SIDE = glm::vec3(-x_radius, 0, 0);
+    RIGHT_VEC_SIDE = glm::vec3(x_radius, 0, 0);
+
+    // Calculate camera distance to make xUnits fit the screen horizontally
+    float fovRad = glm::radians(45.0f);
+    float dist = x_radius / (std::tan(fovRad / 2.0f) * aspect);
+    
+    camera = new Camera(glm::vec3(0, 0, dist), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
+    camera->setAspect(aspect);
+    renderer = new Renderer();
     scene_instantiated = true;
 }
 
 Scene::~Scene() {
     delete app;
     delete camera;
+    delete renderer;
 }
 
 void Scene::InitGraphs(){
@@ -25,8 +45,7 @@ void Scene::InitGraphs(){
     {
         if (!graph->is_initialized)
         {
-            graph->Init(GraphApp::drawCount);
-            GraphApp::drawCount++;
+            graph->Init();
         }
     }
 }
@@ -51,17 +70,11 @@ void Scene::draw(float tick)
         camera->updateMatrices();
         AnimationManager::Run(tick);
 
-        for (GraphMathObject *graph : flat_scene_registry)
-        {
-            if (graph->showGraph && graph->showFill)
-                graph->updateFill(tick);
+        for(GraphMathObject *graph: flat_scene_registry){
+            graph->update(tick);
         }
 
-        for (GraphMathObject *graph : flat_scene_registry)
-        {
-            if (graph->showGraph && graph->showStroke)
-                graph->updateStroke(tick);
-        }
+        renderer->Draw(flat_scene_registry, camera, tick);
     }
     catch (const std::exception &e) { std::cerr << e.what() << std::endl; }
     catch (...) { std::cerr << "Caught an UNKNOWN exception." << std::endl; }
@@ -75,7 +88,7 @@ void Scene::register_object(GraphMathObject *obj)
     if (it == flat_scene_registry.end())
     {
         flat_scene_registry.push_back(obj);
-        if (!obj->is_initialized) obj->Init(GraphApp::drawCount++);
+        if (!obj->is_initialized) obj->Init();
     }
 }
 

@@ -9,44 +9,57 @@
 
 class ThreeDObject: public GraphMathObject{
     protected:
-        std::string vertexShaderPath = "./shaders/quadratic_shaders/vertex.vs";
-        std::string fragmentShaderPath = "./shaders/quadratic_shaders/fragment.fs";
-        std::string geometricShaderPath = "./shaders/quadratic_shaders/geometry.gs";
+        std::string vertexShaderPath = "./shaders/threed_shaders/stroke_vertex.vs";
+        std::string fragmentShaderPath = "./shaders/threed_shaders/stroke_fragment.fs";
+        std::string geometricShaderPath = "./shaders/threed_shaders/stroke_geometry.gs";
 
-        std::string fillVertexShaderPath = "./shaders/surface_shaders/vertex.vs";
-        std::string fillFragmentShaderPath = "./shaders/surface_shaders/fragment.fs";
-        std::string fillGeometricShaderPath = "./shaders/surface_shaders/geometry.gs";
+        std::string fillVertexShaderPath = "./shaders/threed_shaders/fill_vertex.vs";
+        std::string fillFragmentShaderPath = "./shaders/threed_shaders/fill_fragment.fs";
+        std::string fillGeometricShaderPath = "./shaders/threed_shaders/fill_geometry.gs";
 
         std::pair<float, float> range = {-1, 1};
 
-        GLuint StrokeVAO, StrokeVBO;
-        GLuint FillVAO, FillVBO;
+        GLuint StrokeVAO = 0, StrokeVBO = 0, StrokeEBO = 0;
+        GLuint FillVAO = 0, FillVBO = 0, FillEBO = 0;
+        GLuint NormalsVBO = 0;
 
-        std::vector<glm::vec3> stroke_points;
-        std::vector<glm::vec3> stroke_prev_points;
-        std::vector<glm::vec3> stroke_current_points;
-        std::vector<glm::vec3> stroke_next_points;
-        std::vector<glm::vec3> fill_points;
-
-        std::vector<glm::vec3> stroke_color_array;
-        std::vector<glm::vec3> fill_color_array;
+        std::vector<uint32_t> stroke_indices;
+        std::vector<uint32_t> fill_indices;
+        std::vector<glm::vec3> normals;
 
         std::vector<ThreeDObject *> sub_graphs;
+        std::vector<void (*)(ThreeDObject *, float)> updaters;
+        std::vector<float> updateStartTime;
+        std::vector<float> updateEndTime;
 
-        bool showFill = true;
+        std::vector<glm::vec3> m_original_points;
+        std::vector<glm::vec3> m_original_normals;
+
+        // bool showFill = true;
 
     public:
+        enum class GenerationDirection { ALONG_THETA, ALONG_RHO };
+        GenerationDirection generation_dir = GenerationDirection::ALONG_THETA;
+
+        std::vector<std::pair<int, int>> sub_surface_ranges;
+
         glm::vec3 (*graph_func)(float, float, Var) = nullptr;
         Var graph_var;
-        std::pair<float, float> r_range = {0, 1};
-        std::pair<float, float> t_range = {0, 2.0f * M_PI};
+        std::pair<float, float> rho_range = {0, 1};
+        std::pair<float, float> theta_range = {0, 2.0f * M_PI};
         std::pair<float, float> resolution = {32, 32};
+        bool showGrid = true;
+        float gloss = 0.2f;
+        float shadow = 0.2f;
+
+        bool is_periodic_rho = false;
+        bool is_periodic_theta = true;
 
     public:
         ThreeDObject() {}
         ~ThreeDObject() {}
 
-        void Init(float dt = 0) override;
+        void Init() override;
 
         void InitStrokeData() override;
         void InitFillData() override;
@@ -61,6 +74,14 @@ class ThreeDObject: public GraphMathObject{
         void uploadFillDataToShader() override;
 
         void interpolate(const GraphMathObject*, float t) override;
+        void become(GraphMathObject *target) override;
+
+        void setUpdater(void (*updater_function)(ThreeDObject *, float), float s_t, float d)
+        {
+            this->updateStartTime.push_back(s_t);
+            this->updateEndTime.push_back(d == -1.0f ? d : s_t + d);
+            this->updaters.push_back(updater_function);
+        }
 
         void draw(float dt)
         {
@@ -70,25 +91,24 @@ class ThreeDObject: public GraphMathObject{
     void setPoints(std::vector<glm::vec3> points);
 
     void setFillProgress(float progress);
-    void setColorToFillVertices();
 
     void addPoints(glm::vec3 point);
 
-    virtual void generatePoints();
+    void generatePoints() override;
 
     int getSize();
 
     int getFillsize(){
-        return (int)fill_points.size();
+        return (int)fill_indices.size();
     }
 
     int getStrokeSize(){
-        return (int)stroke_points.size();
+        return (int)stroke_indices.size();
     }
 
     void update(float dt) override;
-    void updateStroke(float dt) override;
-    void updateFill(float dt) override;
+    void drawStroke(float dt) override;
+    void drawFill(float dt) override;
     void applyUpdaterFunction(float dt) override;
     void updateStrokePoints() override;
     void updateFillPoints() override;
@@ -105,8 +125,8 @@ class ThreeDObject: public GraphMathObject{
     void add_line_to(glm::vec3 end_anchor) override {}
     void build_points_from_bezier() override {}
     void subdivide_bezier_curves() override {}
-    void add(GraphMathObject *) override {}
-    void alignPoints(GraphMathObject*) override {}
+    // void add(GraphMathObject *) override {}
+    void alignPoints(GraphMathObject*) override;
     void applyColorToVertex() override {}
 };
 

@@ -20,15 +20,17 @@ class Scene;
 
 class Dimension
 {
-    float x, y, width, height;
-
 public:
-    Dimension(float min_x, float max_x, float min_y, float max_y)
+    float x, y, z, width, height, depth;
+
+    Dimension(float min_x, float max_x, float min_y, float max_y, float min_z = 0, float max_z = 0)
     {
         this->x = min_x;
         this->y = max_y;
+        this->z = min_z;
         this->width = (max_x - min_x);
         this->height = (max_y - min_y);
+        this->depth = (max_z - min_z);
     }
 };
 
@@ -111,7 +113,7 @@ public:
     std::vector<GraphMathObject *> subGraphObjects;
 
     // Adaptive subdivision parameters (used by subdivide_bezier_curves)
-    int adaptive_max_depth = 8;
+    int adaptive_max_depth = 10;
     float adaptive_tolerance = 0.01f;
     float adaptive_min_distance = 0.001f;
 
@@ -122,18 +124,18 @@ public:
     bool stroke_data_initialized = false;
     bool fill_data_initialized = false;
 
-    float x, y, width, height;
+    float x, y, z, width, height, depth;
     Dimension *dim;
 
 public:
     GraphMathObject();
     virtual void on_added_to_scene(Scene* target_scene);
-    virtual void Init(float) = 0;
+    virtual void Init() = 0;
 
 public:
     virtual void update(float dt) = 0;
-    virtual void updateStroke(float dt) = 0;
-    virtual void updateFill(float dt) = 0;
+    virtual void drawStroke(float dt) = 0;
+    virtual void drawFill(float dt) = 0;
     virtual void applyUpdaterFunction(float dt) = 0;
     virtual void updateStrokePoints() = 0;
     virtual void updateFillPoints() = 0;
@@ -154,6 +156,7 @@ public:
 public:
     virtual void alignPoints(GraphMathObject*) = 0;
     virtual void interpolate(const GraphMathObject*, float t = 0) = 0;
+    virtual void become(GraphMathObject* target) = 0;
     virtual void updateDimensions();
 
 public:
@@ -180,6 +183,7 @@ public:
 
 public:
     void setRotation(glm::vec3 rot_amount, glm::vec3 rot_pivot);
+    virtual void generatePoints() = 0;
     virtual void updatePoints() = 0;
     virtual void applyColorToVertex() = 0;
 

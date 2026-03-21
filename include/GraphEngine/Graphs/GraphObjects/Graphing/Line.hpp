@@ -13,10 +13,13 @@ class Line: public GraphObject{
         Line(glm::vec3 from = glm::vec3(-10, -10,0), glm::vec3 to = glm::vec3(10, 10,0)){
             this->from = from;
             this->to = to;
-            // duration = 1.0f;
-            setPoints(from);
-            setPoints(to);
-            setDimension(std::min(from.x, to.x), std::max(from.x, to.x), std::min(to.y, from.y), std::max(to.y, from.y));
+            Init();
+        }
+
+        void generatePoints() override
+        {
+            start_bezier_path(from);
+            add_line_to(to);
         }
 };
 

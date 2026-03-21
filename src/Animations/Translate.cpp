@@ -1,6 +1,6 @@
 #include <GraphEngine/Animations/Translate.hpp>
 
-Translate::Translate(GraphObject *object, glm::vec3 to, Position pos) : Animation(object)
+Translate::Translate(GraphMathObject *object, glm::vec3 to, Position pos) : Animation(object)
 {
     this->to = to;
     this->pivot = pos;
@@ -43,7 +43,7 @@ inline glm::vec3 getPosition(float x, float y, float width, float height, Positi
     return position;
 }
 
-Translate::Translate(GraphObject *object, Position to, Position pos) : Animation(object)
+Translate::Translate(GraphMathObject *object, Position to, Position pos) : Animation(object)
 {
     this->to = getPosition(object->x, object->y, object->width, object->height, to);
     this->pivot = pos;
@@ -123,7 +123,7 @@ void Translate::play(float dt)
 }
 
 // Scale Animation constructor
-Scale::Scale(GraphObject *object, glm::vec3 targetScale)
+Scale::Scale(GraphMathObject *object, glm::vec3 targetScale)
     : Animation(object)
 {
     this->targetScale = targetScale;
@@ -150,7 +150,7 @@ void Scale::play(float dt)
 }
 
 
-Rotation::Rotation(GraphObject* object, glm::vec3 rot_amount, Position pos): Animation(object){
+Rotation::Rotation(GraphMathObject* object, glm::vec3 rot_amount, Position pos): Animation(object){
     this->x = object->x;
     this->y = object->y;
     this->width = object->width;
@@ -166,7 +166,7 @@ Rotation::Rotation(GraphObject* object, glm::vec3 rot_amount, Position pos): Ani
     calc_pivot = true;
     // std::cout << "x is: " << x << " y is: " << y << " width is : " << width << " heighth is : " << height << std::endl;
 }
-Rotation::Rotation(GraphObject* object, glm::vec3 rot_amount, glm::vec3 pivot): Animation(object){
+Rotation::Rotation(GraphMathObject* object, glm::vec3 rot_amount, glm::vec3 pivot): Animation(object){
     this->x = object->x;
     this->y = object->y;
     this->width = object->width;

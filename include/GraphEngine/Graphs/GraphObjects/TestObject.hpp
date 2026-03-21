@@ -16,10 +16,4 @@ class TestObject: public GraphObject{
             points.push_back(p);
             is_bezier_path = true;
         }
-
-        void setShader(std::string s1, std::string s2, std::string s3){
-            geometricShaderPath = s2;
-            vertexShaderPath = s1;
-            fragmentShaderPath = s3;
-        }
 };

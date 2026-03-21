@@ -2,18 +2,13 @@
 #ifndef __VAR_HPP__
 #define __VAR_HPP__
 
-
 #include <vector>
 
-// Variable for Varags to be accessible
-// via this Variable
 struct Var
 {
 private:
-    // argument for the Varags that will be
-    // accessible through array like indexing via
-    // overloaded operator
     std::vector<float> args;
+
     void add(float x)
     {
         args.push_back(x);
@@ -22,20 +17,30 @@ private:
     friend class Graph;
 
 public:
-    // return size of the Var Object
-    int size() { return args.size(); }
+    // Single argument constructor
+    Var(float v)
+    {
+        add(v);
+    }
 
-    // method overfload for array like indexing
-    float operator[](int idx)
+    // Variadic constructor
+    template <typename... Ts>
+    Var(Ts... values)
+    {
+        (args.push_back(values), ...); // fold expression (C++17)
+    }
+
+    int size() const { return args.size(); }
+
+    float operator[](int idx) const
     {
         if (idx < size())
-        {
             return args[idx];
-        }
         return 0.0f;
     }
 
-    void addVar(float v){
+    void addVar(float v)
+    {
         args.push_back(v);
     }
 };

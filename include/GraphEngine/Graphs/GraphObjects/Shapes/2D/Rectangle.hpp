@@ -6,8 +6,18 @@
 class Rectangle : public GraphObject
 {
 public:
-    Rectangle(float width, float height, float x = 0, float y = 0)
+    float width, height, x, y;
+
+public:
+    Rectangle(float width = 10.0f, float height = 10.0f, float x = 0, float y = 0)
+        : width(width), height(height), x(x), y(y)
     {
+        Init();
+    }
+
+    void generatePoints() override
+    {
+        std::cout << "This is adding points for rect" << std::endl;
         float h_w = width * 0.5f;
         float h_h = height * 0.5f;
 
@@ -18,7 +28,6 @@ public:
         add_line_to(glm::vec3(x - h_w, y + h_h, 0));
 
         setDimension(x - h_w, x + h_w, y - h_h, y + h_h);
-        close_path();
     }
 };
 

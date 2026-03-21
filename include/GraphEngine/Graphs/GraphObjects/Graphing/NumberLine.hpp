@@ -2,8 +2,8 @@
 #define __NUMBER_LINE_HPP__
 
 #include <GraphEngine/Graphs/GraphObjects/GraphObject.hpp>
-#include <GraphEngine/Graphs/GraphObjects/Shapes/Arrow.hpp>
-#include <GraphEngine/Graphs/GraphObjects/Shapes/Text.hpp>
+#include <GraphEngine/Graphs/GraphObjects/Shapes/2D/Arrow.hpp>
+#include <GraphEngine/Graphs/GraphObjects/Shapes/2D/Text.hpp>
 #include <cmath>
 #include <string>
 #include <iomanip>
@@ -29,15 +29,24 @@ public:
         : x_min(x_min), x_max(x_max),
           tick_step(tick_step), tick_height(tick_height), y_pos(y_pos), unit_size(unit_size)
     {
+        Init();
+    }
+
+    void generatePoints() override
+    {
         float world_min = x_min * unit_size;
         float world_max = x_max * unit_size;
+
+        bezier_points.clear();
+        bezier_sub_path_starts.clear();
+        points.clear();
+        point_sub_path_ranges.clear();
 
         // Main axis line
         start_bezier_path(glm::vec3(world_min, y_pos, 0));
         add_line_to(glm::vec3(world_max, y_pos, 0));
         setDimension(world_min, world_max, y_pos, y_pos);
 
-        // Tick marks
         float v = x_min;
         while (v <= x_max + 1e-5f)
         {
@@ -74,9 +83,6 @@ public:
             Text *text = new Text(label, wx, y_pos + buff, label_size);
 
             add(text);
-
-            // BasePolygon *poly = new BasePolygon(3, 5, wx, y_pos + buff);
-            // add(poly);
 
             v += tick_step;
         }

@@ -49,6 +49,8 @@ public:
     glm::vec3 (*func)(float, Var) = nullptr;
     glm::vec3 (*updater_func)(float, float) = nullptr;
 
+    std::vector<void(*)(GraphObject*, float)> updaters;
+
 public:
     std::string vertexShaderPath = "./shaders/quadratic_shaders/vertex.vs";
     std::string fragmentShaderPath = "./shaders/quadratic_shaders/fragment.fs";
@@ -87,9 +89,6 @@ public:
 
 protected:
     void update(float dt) override;
-    void updateStroke(float dt) override;
-    void updateFill(float dt) override;
-
     void applyUpdaterFunction(float dt) override;
 
     void updateStrokePoints() override;
@@ -97,10 +96,13 @@ protected:
     void updatePoints() override;
 
 public:
+    void drawStroke(float dt) override;
+    void drawFill(float dt) override;
+
     GraphObject();
     ~GraphObject() {}
 
-    void Init(float dt = 0) override;
+    void Init() override;
 
     void InitStrokeData() override;
     void InitFillData() override;
@@ -115,7 +117,7 @@ public:
     void uploadStrokeDataToShader() override;
     void uploadFillDataToShader() override;
 
-    void InitSubObject(float dt);
+    void InitSubObject();
     
     void setColor()
     {
@@ -153,6 +155,7 @@ public:
     void linearInterpolate(int);
     std::vector<glm::vec3> linearInterpolate(std::vector<glm::vec3>, int );
     void functionalInterpolate(int);
+    void become(GraphMathObject *target) override;
 
     void interpolateColor(int);
 
@@ -164,14 +167,14 @@ public:
     void build_points_from_bezier() override;
     void subdivide_bezier_curves() override;
 
-    void generatePoints(glm::vec3 (*func)(float, Var), Var v);
+    virtual void generatePoints() = 0;
     void makeSmooth();
     void UpdateGraphWithFunction(float);
-    void setUpdater(glm::vec3 (*updater_function)(float, float), float s_t, float d)
+    void setUpdater(void (*updater_function)(GraphObject*, float), float s_t, float d)
     {
-        this->updater_func = updater_function;
         this->updateStartTime.push_back(s_t);
-        this->updateEndTime.push_back(s_t + d );
+        this->updateEndTime.push_back(d == -1.0f? d: s_t + d );
+        this->updaters.push_back(updater_function);
     }
     void applyColorToVertex() override;
 
@@ -180,7 +183,8 @@ public:
         points.push_back(p);
     }
 
-    void setDimension(float, float, float, float);
+    void setDimension(float minX, float maxX, float minY, float maxY);
+    void setDimension(float minX, float maxX, float minY, float maxY, float minZ, float maxZ);
 
     // contains all the helper functions
     int getSize()

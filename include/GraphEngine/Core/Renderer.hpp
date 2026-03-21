@@ -1,27 +1,32 @@
-#pragma once
+#ifndef __RENDERER_HPP__
+#define __RENDERER_HPP__
 
+#include <vector>
+#include <glad.h>
+#include <glfw3.h>
+#include <GraphEngine/Camera/Camera.hpp>
 #include <GraphEngine/Graphs/GraphObjects/GraphMathObject.hpp>
+#include <GraphEngine/Graphs/GraphObjects/GraphObject.hpp>
+#include <GraphEngine/Graphs/GraphObjects/ThreeDObject.hpp>
 
+class Renderer {
+public:
+    Renderer() = default;
+    ~Renderer() = default;
 
-class Renderer{
+    /**
+     * @brief Dispatches drawing commands for a list of graph objects.
+     * Manages global variables (view, projection, light, etc.) and avoids 
+     * redundant state changes.
+     */
+    void Draw(const std::vector<GraphMathObject*>& objects, Camera* camera, float dt);
 
-    public: 
-        void drawLineStrip(GraphMathObject* GMObject, float dt){
-            glEnable(GL_BLEND);
-            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-            GMObject->updateStroke(dt);
-        }
-        void drawFilledPolygon(GraphMathObject* GMObject){
-            glEnable(GL_STENCIL_TEST);
-            glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // no colour output
-            glDepthMask(GL_FALSE);
-            glStencilMask(0xFF);
-            glClear(GL_STENCIL_BUFFER_BIT);
-            glStencilFunc(GL_ALWAYS, 0, 0xFF);
-            // Increment for CW, decrement for CCW → non-zero fill rule
-            glStencilOpSeparate(GL_FRONT, GL_KEEP, GL_KEEP, GL_INCR_WRAP);
-            glStencilOpSeparate(GL_BACK, GL_KEEP, GL_KEEP, GL_DECR_WRAP);
-            glDisable(GL_CULL_FACE);
-        }
+private:
+    void renderGraphObjectFill(GraphObject* gObj, Camera* camera, float dt);
+    void renderGraphObjectStroke(GraphObject* gObj, Camera* camera, float dt);
 
+    void renderThreeDObjectFill(ThreeDObject* tObj, Camera* camera, float dt);
+    void renderThreeDObjectStroke(ThreeDObject* tObj, Camera* camera, float dt);
 };
+
+#endif // __RENDERER_HPP__

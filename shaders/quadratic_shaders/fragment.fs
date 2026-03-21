@@ -128,12 +128,13 @@ void runMain(){
     
     // Smooth step from inner edge to outer edge
     // This gives proper anti-aliased strokes even at sharp corners
-    float alpha = smoothstep(radius + aa_width, radius - aa_width, d );
+    float alpha = smoothstep(radius, -radius,(d / (radius * 4 + 0.1)));
+    // float alpha = smoothstep(radius + aa_width , radius - aa_width, d);
     
     // Clamp to prevent over-bright pixels
-    alpha = clamp(alpha, 0.0, 1.0);
+    alpha = clamp(alpha * 2, 0.0, 1.0);
     
-    if(alpha <= 0.01) discard;
+    if(alpha <= 0.1) discard;
 
     alpha = alpha * u_stroke_opacity;
 

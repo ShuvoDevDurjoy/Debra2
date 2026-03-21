@@ -5,11 +5,14 @@ Scene* currentGraph = nullptr;
 int GraphApp::drawCount = 0;
 int GraphApp::window_width = 1200;
 int GraphApp::window_height = 600;
+float GraphApp::xUnits = 14.22f;
+std::string GraphApp::font_path = "./fonts/playful_normal.ttf";
 
-GraphApp::GraphApp(int width, int height)
+GraphApp::GraphApp(int width, int height, float xUnits)
 {
     window_width = width;
     window_height = height;
+    GraphApp::xUnits = xUnits;
     InitWindow();
     loadGLAD();
     process_input();

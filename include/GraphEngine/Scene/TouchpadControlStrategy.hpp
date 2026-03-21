@@ -46,6 +46,8 @@ public:
         if (!camera) return;
 
         if (event.type == MouseEvent::Type::MOVE) {
+            int width, height;
+            glfwGetWindowSize(glfwGetCurrentContext(), &width, &height);
             if (event.button == GLFW_MOUSE_BUTTON_LEFT && event.action == GLFW_PRESS) {
                 if (lastX < 0 || lastY < 0) { lastX = event.xpos; lastY = event.ypos; return; }
 
@@ -54,8 +56,6 @@ public:
                 lastX = event.xpos;
                 lastY = event.ypos;
 
-                int width, height;
-                glfwGetWindowSize(glfwGetCurrentContext(), &width, &height);
                 float zDist = glm::length(camera->getPosition() - camera->getCenter());
                 float panScale = zDist / (float)width;
 
@@ -74,9 +74,11 @@ public:
                 lastX = event.xpos;
                 lastY = event.ypos;
 
-                float sensitivity = 0.5f;
-                camera->rotateAround(camera->getCenter(), -dx * sensitivity, glm::vec3(0, 1, 0));
-                camera->rotateAround(camera->getCenter(), -dy * sensitivity, glm::vec3(1, 0, 0));
+                float sensitivity = 2.0f;
+                float sensitivityX = 360.0f / (float)width;
+                float sensitivityY = 360.0f / (float)height;
+                camera->rotateAround(camera->getCenter(), -dx * sensitivityX, glm::vec3(0, 1, 0));
+                camera->rotateAround(camera->getCenter(), -dy * sensitivityY, glm::vec3(1, 0, 0));
             } else {
                 lastX = -1;
                 lastY = -1;

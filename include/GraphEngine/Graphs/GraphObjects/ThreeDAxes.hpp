@@ -16,21 +16,38 @@
 #include <GraphEngine/Graphs/GraphObjects/ThreeDObject.hpp>
 #include <GraphEngine/Graphs/GraphObjects/GraphMathObject.hpp>
 
+struct TConfig{
+    std::pair<float, float> x_range = {-10.0f, 10.0f};
+    std::pair<float, float> y_range = {-10.0f, 10.0f};
+    std::pair<float, float> z_range = {-10.0f, 10.0f};
+    float shaft_radius = 0.15f;
+    float head_length = 1.0f;
+    GraphColor axis_color = GraphColor(1, 1, 0);
+    float tick_dis = 2.0f;
+    float tick_height = 0.5f;
+    float tick_width = 0.5f;
+    float axis_label_size = 2.0f;
+    float label_font_size = 1.5f;
+};
+
 class ThreeDAxes : public ThreeDObject
 {
 public:
-    ThreeDAxes();
-    void generate(Vec3 start, Vec3 end);
+    std::pair<float, float> x_range = {-5.0f, 5.0f};
+    std::pair<float, float> y_range = {-5.0f, 5.0f};
+    std::pair<float, float> z_range = {-5.0f, 5.0f};
+    TConfig config;
 
-    void setStrokeData() override {}
-    void setFillData() override {}
+public:
+    ThreeDAxes(TConfig config);
+    void setXRange(float min, float max) { x_range = {min, max}; }
+    void setYRange(float min, float max) { y_range = {min, max}; }
+    void setZRange(float min, float max) { z_range = {min, max}; }
 
     void generatePoints() override;
-    void add(glm::vec3 p)
-    {
-        fill_points.push_back(p);
-        fill_color_array.push_back(glm::vec3(0.5f, 0.5f, 0.5f)); // Default gray axes
-    }
+    void Init() override;
+
+    using ThreeDObject::add;
 };
 
 #endif

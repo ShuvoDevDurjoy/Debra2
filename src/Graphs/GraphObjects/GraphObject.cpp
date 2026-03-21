@@ -1,134 +1,79 @@
 #include <GraphEngine/Core/ShaderManager.hpp>
 #include <GraphEngine/Graphs/GraphObjects/GraphObject.hpp>
 
+inline void showPoints(std::vector<glm::vec3> pts)
+{
+    for (auto p : pts)
+    {
+        std::cout << "(" << p.x << "," << p.y << "," << p.z << ") , ";
+    }
+    std::cout << std::endl;
+}
+
+inline void showRange(std::vector<std::pair<int, int>> ranges)
+{
+    for (auto r : ranges)
+    {
+        std::cout << "(" << r.first << "," << r.second << ") , ";
+    }
+    std::cout << std::endl;
+}
+
 GraphObject::GraphObject()
     : StrokeVAO(0), StrokeVBO(0), FillVAO(0), FillVBO(0), CoverVAO(0), CoverVBO(0)
 {
+    layer = GraphApp::drawCount++;
 }
 
 void GraphObject::update(float dt)
 {
-    if (updater_func)
+    if (updaters.size())
     {
-        if (updateStartTime[0] <= dt && (updateEndTime[0] >= dt || updateEndTime[0] == -1))
+        int index = 0;
+        for (void (*updater_function)(GraphObject *, float) : updaters)
         {
-            UpdateGraphWithFunction((dt - updateStartTime[0]) / (updateEndTime[0] - updateStartTime[0]));
-        }
-    }
-
-}
-
-void GraphObject::updateStroke(float dt)
-{
-
-    if (stroke_data_initialized && stroke_shader && showGraph)
-    {
-        stroke_shader->use();
-        glm::mat4 view = glm::mat4(1.0f);
-        glm::mat4 projection = glm::mat4(1.0f);
-        if (scene && scene->getCamera()) {
-            view = scene->getCamera()->getViewMatrix();
-            projection = scene->getCamera()->getProjectionMatrix();
-        }
-        
-        model = glm::mat4(1.0f);
-
-        stroke_shader->setMat4("model", model);
-        stroke_shader->setMat4("view", view);
-        stroke_shader->setMat4("projection", projection);
-
-        // std::cout << "progress is: " << progress << std::endl;
-        stroke_shader->setFloat("uProgress", progress);
-        stroke_shader->setInt("vertexCount", getSize());
-        stroke_shader->setVec3("objectColor", 0.67f, 0.67f, 0.67f);
-        stroke_shader->setVec3("lightColor", 1.0f, 0.8f, 0.8f);
-        glm::vec3 camPos(0, 0, 100);
-        if (scene && scene->getCamera()) camPos = scene->getCamera()->getPosition();
-        stroke_shader->setVec3("lightPos", camPos.x, camPos.y, camPos.z);
-        stroke_shader->setVec3("viewPos", camPos.x, camPos.y, camPos.z);
-        stroke_shader->setFloat("u_thickness", 1.0f);
-        stroke_shader->setFloat("u_stroke_opacity", stroke_opacity);
-        stroke_shader->setFloat("u_radius", 2.0f);
-        stroke_shader->setVec2("uViewportSize", (float)GraphApp::window_width, (float)GraphApp::window_height);
-        stroke_shader->setFloat("u_line_width", line_width);
-        stroke_shader->setFloat("uv_anti_alias_width_pass", 1.0f);
-        stroke_shader->setFloat("user_bezier_always", use_bezier_always ? 1.0f : 0.0f);
-        stroke_shader->setInt("u_layer", layer);
-
-        // Pass industry-standard stroke properties to shader
-        stroke_shader->setFloat("uMiterLimit", miter_limit);
-        stroke_shader->setInt("uStrokeJoinStyle", static_cast<int>(stroke_join_style));
-        glBindVertexArray(StrokeVAO);
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-        if (!point_sub_path_ranges.empty())
-        {
-            // Multi-sub-path: issue one GL_LINE_STRIP per sub-path so they never connect.
-            // All sub-paths live in the same VAO/VBO — zero data duplication.
-            std::vector<GLint> firsts;
-            std::vector<GLsizei> counts;
-            firsts.reserve(point_sub_path_ranges.size());
-            counts.reserve(point_sub_path_ranges.size());
-            for (const auto &[first, count] : point_sub_path_ranges)
+            if (updateStartTime[index] <= dt && ((updateEndTime[index] == -1.0f) || (dt <= updateEndTime[index])))
             {
-                firsts.push_back(static_cast<GLint>(first));
-                counts.push_back(static_cast<GLsizei>(count));
+                updater_function(this, dt - updateStartTime[index]);
             }
-            glMultiDrawArrays(GL_LINE_STRIP,
-                              firsts.data(),
-                              counts.data(),
-                              static_cast<GLsizei>(firsts.size()));
+            index++;
         }
-        else
+    }
+    InitStrokeData();
+}
+
+void GraphObject::drawStroke(float dt)
+{
+    if (!stroke_data_initialized) return;
+
+    glBindVertexArray(StrokeVAO);
+
+    if (!point_sub_path_ranges.empty())
+    {
+        std::vector<GLint> firsts;
+        std::vector<GLsizei> counts;
+        firsts.reserve(point_sub_path_ranges.size());
+        counts.reserve(point_sub_path_ranges.size());
+        for (const auto &[first, count] : point_sub_path_ranges)
         {
-            // Single continuous path (or non-bezier path)
-            glDrawArrays(GL_LINE_STRIP, drawStart, getSize());
+            firsts.push_back(static_cast<GLint>(first));
+            counts.push_back(static_cast<GLsizei>(count));
         }
 
-        for (GraphMathObject *subObj : subGraphObjects)
-        {
-            subObj->updateStroke(dt);
-        }
-
+        glMultiDrawArrays(GL_LINE_STRIP,
+                          firsts.data(),
+                          counts.data(),
+                          static_cast<GLsizei>(firsts.size()));
+    }
+    else
+    {
+        // Single continuous path (or non-bezier path)
+        glDrawArrays(GL_LINE_STRIP, drawStart, getSize());
     }
 }
 
-void GraphObject::updateFill(float dt)
+void GraphObject::drawFill(float dt)
 {
-    if (!showFill)
-        return;
-
-    glEnable(GL_STENCIL_TEST);
-    glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // no colour output
-    glDepthMask(GL_FALSE);
-    glStencilMask(0xFF);
-    glClear(GL_STENCIL_BUFFER_BIT);
-    glStencilFunc(GL_ALWAYS, 0, 0xFF);
-    // Increment for CW, decrement for CCW → non-zero fill rule
-    glStencilOpSeparate(GL_FRONT, GL_KEEP, GL_KEEP, GL_INCR_WRAP);
-    glStencilOpSeparate(GL_BACK, GL_KEEP, GL_KEEP, GL_DECR_WRAP);
-    glDisable(GL_CULL_FACE);
-
-    // We now send all vertices and let the Geometry Shader smoothly slice the fan based on u_fill_progress
-    if (fillProgress <= 0.0f) return;
-
-    if (stencil_shader)
-    {
-        glm::mat4 view = glm::mat4(1.0f);
-        glm::mat4 projection = glm::mat4(1.0f);
-        if (scene && scene->getCamera()) {
-            view = scene->getCamera()->getViewMatrix();
-            projection = scene->getCamera()->getProjectionMatrix();
-        }
-
-        stencil_shader->use();
-        stencil_shader->setMat4("model", model);
-        stencil_shader->setMat4("view", view);
-        stencil_shader->setMat4("projection", projection);
-        stencil_shader->setInt("vertexCount", getSize());
-        stencil_shader->setFloat("u_fill_progress", fillProgress);
-    }
     glBindVertexArray(StrokeVAO);
     if (!point_sub_path_ranges.empty())
     {
@@ -150,141 +95,50 @@ void GraphObject::updateFill(float dt)
     {
         glDrawArrays(GL_TRIANGLE_FAN, 0, (GLsizei)getSize());
     }
-
-    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-    // glDepthMask(GL_TRUE);
-    glStencilFunc(GL_NOTEQUAL, 0, 0xFF);
-    glStencilOp(GL_ZERO, GL_ZERO, GL_ZERO); // clear stencil after painting
-
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-    if (cover_shader)
-    {
-        glm::mat4 view = glm::mat4(1.0f);
-        glm::mat4 projection = glm::mat4(1.0f);
-        if (scene && scene->getCamera()) {
-            view = scene->getCamera()->getViewMatrix();
-            projection = scene->getCamera()->getProjectionMatrix();
-        }
-
-        cover_shader->use();
-        cover_shader->setMat4("model", model);
-        cover_shader->setMat4("view", view);
-        cover_shader->setMat4("projection", projection);
-        glm::vec3 fc = glm::vec3(0.5f, 1.0f, 0.5f);
-        if (fc == glm::vec3(0) && !colors.empty())
-            fc = glm::vec3(colors[0].RED, colors[0].GREEN, colors[0].BLUE);
-        cover_shader->setVec3("u_fill_color", fc.r, fc.g, fc.b);
-        cover_shader->setFloat("u_fill_opacity", fillOpacity);
-        cover_shader->setFloat("u_fill_progress", fillProgress);
-        cover_shader->setInt("vertexCount", getSize());
-    }
-    // Use the same VAO for the cover quad (full outline box)
-    if (!point_sub_path_ranges.empty())
-    {
-        std::vector<GLint> firsts;
-        std::vector<GLsizei> counts;
-        firsts.reserve(point_sub_path_ranges.size());
-        counts.reserve(point_sub_path_ranges.size());
-        for (const auto &[first, count] : point_sub_path_ranges)
-        {
-            firsts.push_back(static_cast<GLint>(first));
-            counts.push_back(static_cast<GLsizei>(count));
-        }
-        glMultiDrawArrays(GL_TRIANGLE_FAN,
-                          firsts.data(),
-                          counts.data(),
-                          static_cast<GLsizei>(firsts.size()));
-    }
-    else
-    {
-        glDrawArrays(GL_TRIANGLE_FAN, 0, (GLsizei)getSize());
-    }
-    // glEnable(GL_CULL_FACE);
-
-    glDisable(GL_STENCIL_TEST);
 }
-// void GraphObject::updateFill(float dt)
-// {
 
-//     fill_shader->use();
-
-//     fill_shader->setMat4("model", model);
-//     fill_shader->setMat4("view", view);
-//     fill_shader->setMat4("projection", projection);
-
-//     fill_shader->setFloat("uProgress", fillProgress);
-//     fill_shader->setInt("vertexCount", getFillSize());
-//     fill_shader->setVec3("objectColor", 0.67f, 0.67f, 0.67f);
-//     fill_shader->setVec3("lightColor", 1.0f, 0.8f, 0.8f);
-//     fill_shader->setFloat("fillOpacity", fillOpacity);
-//     fill_shader->setVec3("lightPos", GraphApp::cameraPos[0], GraphApp::cameraPos[1], GraphApp::cameraPos[2]);
-//     fill_shader->setVec3("viewPos", GraphApp::cameraPos[0], GraphApp::cameraPos[1], GraphApp::cameraPos[2]);
-
-//     glBindVertexArray(FillVAO);
-//     glDrawArrays(GL_TRIANGLES, 0, getFillSize());
-// }
-void GraphObject::Init(float s_time)
+void GraphObject::Init()
 {
 
-    if(is_initialized)
+    if (is_initialized)
         return;
 
-    layer = s_time;
+    generatePoints();
 
-    ShaderManager* sm = ShaderManager::getInstance();
+    glGenVertexArrays(1, &FillVAO);
+    glGenBuffers(1, &FillVBO);
+    glGenVertexArrays(1, &FillVAO);
+    glGenBuffers(1, &FillVBO);
 
-    if (!stroke_shader)
-        this->stroke_shader = sm->getShader(vertexShaderPath, geometricShaderPath, fragmentShaderPath);
-    if (!fill_shader)
-        this->fill_shader = sm->getShader(fillVertexShaderPath, fillGeometricShaderPath, fillFragmentShaderPath);
-
-    // Load stencil shaders for two-pass fill, now including geometry shader for smooth sweeping
-    if (!stencil_shader)
-        this->stencil_shader = sm->getShader(stencilVertexPath, "./shaders/stencil_fill/geometry.gs", stencilFragPath);
-    if (!cover_shader)
-        this->cover_shader = sm->getShader(stencilVertexPath, "./shaders/stencil_fill/geometry.gs", coverFragPath);
-    // check if the graph has any points to deal with
-    if (!getSize())
-    {
-        glGenVertexArrays(1, &FillVAO);
-        glGenBuffers(1, &FillVBO);
-        glGenVertexArrays(1, &FillVAO);
-        glGenBuffers(1, &FillVBO);
-    }
     // Initialize OpenGL Buffer and Array
     glGenVertexArrays(1, &StrokeVAO);
     glGenBuffers(1, &StrokeVBO);
 
-    // initialize the stroke data
+    initializeStrokeShader();
+    if (is_bezier_path && bezier_dirty)
+    {
+        build_points_from_bezier();
+    }
     InitStrokeData();
+    InitSubObject();
+    // initialize the stroke data
     resolution = getSize() - 1;
-    // InitFillData();
-
     drawSize = getSize();
     drawStart = 0;
-
-    InitSubObject(s_time);
-
     is_initialized = true;
 }
 
 void GraphObject::InitStrokeData()
 {
-    if(is_initialized)
-        return;
-    if (is_bezier_path && bezier_dirty)
+    if (stroke_dirty)
     {
-        build_points_from_bezier();
+        setStrokeData();
+        applyColorToVertex();
+        glBindVertexArray(StrokeVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, StrokeVBO);
+        uploadStrokeDataToShader();
     }
-
-    setStrokeData();
-    applyColorToVertex();
-    glBindVertexArray(StrokeVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, StrokeVBO);
-    initializeStrokeShader();
-    uploadStrokeDataToShader();
+    stroke_dirty = false;
 }
 
 void GraphObject::InitFillData()
@@ -298,8 +152,18 @@ void GraphObject::InitFillData()
 
 void GraphObject::initializeStrokeShader()
 {
-    int buffer_size = getSize() * sizeof(glm::vec3);
-    glBufferData(GL_ARRAY_BUFFER, 4 * buffer_size, nullptr, GL_DYNAMIC_DRAW);
+    ShaderManager *sm = ShaderManager::getInstance();
+
+    if (!stroke_shader)
+        this->stroke_shader = sm->getShader(vertexShaderPath, geometricShaderPath, fragmentShaderPath);
+    if (!fill_shader)
+        this->fill_shader = sm->getShader(fillVertexShaderPath, fillGeometricShaderPath, fillFragmentShaderPath);
+
+    // Load stencil shaders for two-pass fill, now including geometry shader for smooth sweeping
+    if (!stencil_shader)
+        this->stencil_shader = sm->getShader(stencilVertexPath, "./shaders/stencil_fill/geometry.gs", stencilFragPath);
+    if (!cover_shader)
+        this->cover_shader = sm->getShader(stencilVertexPath, "./shaders/stencil_fill/geometry.gs", coverFragPath);
 }
 void GraphObject::initializeFillShader()
 {
@@ -309,22 +173,13 @@ void GraphObject::initializeFillShader()
     glBufferData(GL_ARRAY_BUFFER, buffer_size, nullptr, GL_DYNAMIC_DRAW);
 }
 
-void GraphObject::InitSubObject(float s_time)
+void GraphObject::InitSubObject()
 {
     for (GraphMathObject *subObj : subGraphObjects)
     {
-        subObj->Init(s_time);
+        subObj->Init();
     }
 }
-
-// inline void showPoints(std::vector<glm::vec3> pts)
-// {
-//     for (auto p : pts)
-//     {
-//         std::cout << "(" << p.x << "," << p.y << "," << p.z << ") ";
-//     }
-//     std::cout << std::endl;
-// }
 
 void GraphObject::setStrokeData()
 {
@@ -342,11 +197,15 @@ void GraphObject::setStrokeData()
         point_sub_path_ranges.push_back({0, (int)points.size()});
     }
 
+    std::vector<glm::vec3> dup;
+    std::vector<std::pair<int, int>> ranges;
     for (const auto &range : point_sub_path_ranges)
     {
         int start = range.first;
         int count = range.second;
         int end = start + count - 1;
+
+        int range_start = dup.size();
 
         bool isClosed = false;
         if (count > 2 && isEqual(points[start], points[end]))
@@ -357,43 +216,41 @@ void GraphObject::setStrokeData()
         for (int i = start; i <= end; ++i)
         {
             // 1. Current Point
-            stroke_current_points.push_back(points[i]);
 
             // 2. Previous Point: If at start of sub-path, and closed, wrap around to point before end
             if (i == start)
             {
                 if (isClosed)
                 {
-                    stroke_prev_points.push_back(points[end - 1]);
+                    dup.push_back(points[end - 1]);
                 }
                 else
                 {
-                    stroke_prev_points.push_back(points[i]);
+                    dup.push_back(points[i]);
                 }
             }
-            else
-            {
-                stroke_prev_points.push_back(points[i - 1]);
-            }
+
+            dup.push_back(points[i]);
 
             // 3. Next Point: If at end of sub-path, and closed, wrap around to point after start
             if (i == end)
             {
                 if (isClosed)
                 {
-                    stroke_next_points.push_back(points[start + 1]);
+                    dup.push_back(points[start + 1]);
                 }
                 else
                 {
-                    stroke_next_points.push_back(points[i]);
+                    dup.push_back(points[i]);
                 }
             }
-            else
-            {
-                stroke_next_points.push_back(points[i + 1]);
-            }
         }
+
+        ranges.push_back({range_start, count});
     }
+
+    points = dup;
+    point_sub_path_ranges = ranges;
 
     stroke_dirty = false;
     updateDimensions();
@@ -570,67 +427,7 @@ void GraphObject::applyUpdaterFunction(float dt)
         points.push_back(point);
     }
 
-    setDimension(minx, maxX, minY, maxY);
-}
-
-void GraphObject::generatePoints(glm::vec3 (*func)(float, Var), Var v)
-{
-    this->func = func;
-    this->func_var = v;
-
-    float t_start = range.first;
-    float t_end = range.second;
-
-    int num_samples = std::max(128, resolution);
-    std::vector<float> t_values;
-    for (int i = 0; i <= num_samples; ++i)
-    {
-        t_values.push_back(t_start + (t_end - t_start) * (float)i / (float)num_samples);
-    }
-
-    auto sample = [&](float t)
-    {
-        return func(t, v);
-    };
-
-    // Initialize bezier path using Catmull-Rom to Cubic conversion for
-    // smooth curve matching the mathematical function
-    if (t_values.size() > 1)
-    {
-        std::vector<glm::vec3> pts;
-        for (float t : t_values)
-        {
-            pts.push_back(sample(t));
-        }
-
-        start_bezier_path(pts[0]);
-        for (size_t i = 0; i < pts.size() - 1; ++i)
-        {
-            glm::vec3 p0 = (i == 0) ? pts[i] : pts[i - 1];
-            glm::vec3 p1 = pts[i];
-            glm::vec3 p2 = pts[i + 1];
-            glm::vec3 p3 = (i + 2 < pts.size()) ? pts[i + 2] : pts[i + 1];
-
-            // Catmull-Rom to Cubic Bezier conversion
-            glm::vec3 c1 = p1 + (p2 - p0) / 6.0f;
-            glm::vec3 c2 = p2 - (p3 - p1) / 6.0f;
-
-            add_cubic_bezier_curve_to(c1, c2, p2);
-        }
-    }
-
-    // Calculate extents for dimensions
-    float minx = std::numeric_limits<float>::max(), maxX = -std::numeric_limits<float>::max();
-    float minY = std::numeric_limits<float>::max(), maxY = -std::numeric_limits<float>::max();
-    for (const auto &p : points)
-    {
-        minx = std::min(minx, p.x);
-        maxX = std::max(maxX, p.x);
-        minY = std::min(minY, p.y);
-        maxY = std::max(maxY, p.y);
-    }
-
-    setDimension(minx, maxX, minY, maxY);
+    setDimension(minx, maxX, minY, maxY, 0, 0); // 2D updater for now
 }
 
 void GraphObject::makeSmooth()
@@ -643,6 +440,7 @@ void GraphObject::makeSmooth()
     {
         float minx = std::numeric_limits<float>::max(), maxX = -std::numeric_limits<float>::max();
         float minY = std::numeric_limits<float>::max(), maxY = -std::numeric_limits<float>::max();
+        float minZ = std::numeric_limits<float>::max(), maxZ = -std::numeric_limits<float>::max();
 
         for (const auto &p : points)
         {
@@ -650,9 +448,11 @@ void GraphObject::makeSmooth()
             maxX = std::max(maxX, p.x);
             minY = std::min(minY, p.y);
             maxY = std::max(maxY, p.y);
+            minZ = std::min(minZ, p.z);
+            maxZ = std::max(maxZ, p.z);
         }
 
-        setDimension(minx, maxX, minY, maxY);
+        setDimension(minx, maxX, minY, maxY, minZ, maxZ);
         updatePoints();
     }
 }
@@ -685,40 +485,27 @@ void GraphObject::UpdateGraphWithFunction(float dt)
 void GraphObject::uploadStrokeDataToShader()
 {
 
-    // if (!getSize())
-    // {
-    //     std::cerr << "No Points to Initialize for Stroke" << std::endl;
-    // }
-
-    size_t buffer_size = getSize() * sizeof(glm::vec3);
-    if (StrokeVAO == 0) return; 
+    size_t buffer_size = getPointsSize() * sizeof(glm::vec3);
+    if (StrokeVAO == 0)
+        return;
     glBindVertexArray(StrokeVAO);
     glBindBuffer(GL_ARRAY_BUFFER, StrokeVBO);
 
-    // Reallocate buffer to fit current size (Manim-style flexibility)
-    glBufferData(GL_ARRAY_BUFFER, 4 * buffer_size, NULL, GL_DYNAMIC_DRAW);
+    // std::cout << "setting buffer size: " << buffer_size * 2 << std::endl;
+    // std::cout << "Stroke color size: " << stroke_color_array.size() << std::endl;
+    // std::cout << "Stroke color size: " << points.size() << std::endl;
+    glBufferData(GL_ARRAY_BUFFER, 2 * buffer_size, NULL, GL_DYNAMIC_DRAW);
 
-    glBufferSubData(GL_ARRAY_BUFFER, 0, buffer_size, stroke_current_points.data());
-    glBufferSubData(GL_ARRAY_BUFFER, buffer_size, buffer_size, stroke_prev_points.data());
-    glBufferSubData(GL_ARRAY_BUFFER, 2 * buffer_size, buffer_size, stroke_current_points.data()); // Fallback for next_points if needed
+    glBufferSubData(GL_ARRAY_BUFFER, 0, buffer_size, points.data());
+    glBufferSubData(GL_ARRAY_BUFFER, buffer_size, buffer_size, stroke_color_array.data());
 
-    if ((int)stroke_next_points.size() >= getSize())
-    {
-        glBufferSubData(GL_ARRAY_BUFFER, 2 * buffer_size, buffer_size, stroke_next_points.data());
-    }
-
-    if ((int)stroke_color_array.size() >= getSize())
-    {
-        glBufferSubData(GL_ARRAY_BUFFER, 3 * buffer_size, buffer_size, stroke_color_array.data());
-    }
-
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void *)(sizeof(glm::vec3)));
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)(buffer_size));
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void *)(0));
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)(2 * buffer_size));
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void *)(2 * sizeof(glm::vec3)));
     glEnableVertexAttribArray(2);
-    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)(3 * buffer_size));
+    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void *)(buffer_size));
     glEnableVertexAttribArray(3);
 
     stroke_data_initialized = true;
@@ -727,7 +514,8 @@ void GraphObject::uploadStrokeDataToShader()
 void GraphObject::uploadFillDataToShader()
 {
     size_t buffer_size = getFillSize() * sizeof(glm::vec3);
-    if (FillVAO == 0) return;
+    if (FillVAO == 0)
+        return;
     glBindVertexArray(FillVAO);
     glBindBuffer(GL_ARRAY_BUFFER, FillVBO);
     glBufferSubData(GL_ARRAY_BUFFER, 0, buffer_size, current_fill_points.data());
@@ -737,10 +525,17 @@ void GraphObject::uploadFillDataToShader()
 
 void GraphObject::setDimension(float minX, float maxX, float minY, float maxY)
 {
+    setDimension(minX, maxX, minY, maxY, 0, 0);
+}
+
+void GraphObject::setDimension(float minX, float maxX, float minY, float maxY, float minZ, float maxZ)
+{
     x = minX;
     y = maxY;
+    z = minZ;
     width = maxX - minX;
     height = maxY - minY;
+    depth = maxZ - minZ;
 }
 
 void GraphObject::updateStrokePoints()
@@ -757,6 +552,7 @@ void GraphObject::updateStrokePoints()
 
     float minx = FLT_MAX, maxX = -FLT_MAX;
     float minY = FLT_MAX, maxY = -FLT_MAX;
+    float minZ = FLT_MAX, maxZ = -FLT_MAX;
 
     for (int i = 0; i < (int)points.size(); ++i)
     {
@@ -781,9 +577,11 @@ void GraphObject::updateStrokePoints()
         maxX = std::max(maxX, p.x);
         minY = std::min(minY, p.y);
         maxY = std::max(maxY, p.y);
+        minZ = std::min(minZ, p.z);
+        maxZ = std::max(maxZ, p.z);
     }
 
-    setDimension(minx, maxX, minY, maxY);
+    setDimension(minx, maxX, minY, maxY, minZ, maxZ);
 }
 
 void GraphObject::updateFillPoints()
@@ -832,6 +630,7 @@ void GraphObject::updatePoints()
     setStrokeData();
     uploadStrokeDataToShader();
     // uploadFillDataToShader();
+    updateDimensions();
 }
 
 void GraphObject::linearInterpolate(int number)
@@ -874,9 +673,7 @@ void GraphObject::linearInterpolate(int number)
     resolution = interpolateNumber;
 }
 
-std::vector<glm::vec3> GraphObject::linearInterpolate(
-    const std::vector<glm::vec3> pts,
-    int interpolation_count)
+std::vector<glm::vec3> GraphObject::linearInterpolate(const std::vector<glm::vec3> pts, int interpolation_count)
 {
     int point_size = pts.size();
 
@@ -960,29 +757,16 @@ void GraphObject::functionalInterpolate(int number)
         points.push_back(point);
     }
     resolution = interpolateNumber;
-    setDimension(minx, maxX, minY, maxY);
+    setDimension(minx, maxX, minY, maxY, 0, 0); // 2D func for now
 }
-
-// void GraphObject::interpolate(int number)
-// {
-//     if(func){
-//         functionalInterpolate(number);
-//     }
-//     else{
-//         linearInterpolate(number);
-//     }
-
-//     glGenVertexArrays(1, &FillVAO);
-//     glGenBuffers(1, &FillVBO);
-//     InitStrokeData();
-//     InitFillData();
-// }
 
 void GraphObject::alignPoints(GraphMathObject *target)
 {
     // Ensure points are generated for bezier-based objects before alignment
-    if (this->is_bezier_path && this->bezier_dirty) this->build_points_from_bezier();
-    if (target->is_bezier_path && target->bezier_dirty) target->build_points_from_bezier();
+    if (this->is_bezier_path && this->bezier_dirty)
+        this->build_points_from_bezier();
+    if (target->is_bezier_path && target->bezier_dirty)
+        target->build_points_from_bezier();
 
     // If neither has points/ranges (like a parent Text object), skip alignment
     if (this->point_sub_path_ranges.empty() && target->point_sub_path_ranges.empty())
@@ -1006,9 +790,12 @@ void GraphObject::alignPoints(GraphMathObject *target)
 
     auto resample_curve = [](const std::vector<glm::vec3> &pts, int N)
     {
-        if ((int)pts.size() == N) return pts;
-        if (pts.empty()) return std::vector<glm::vec3>(N, glm::vec3(0));
-        if (pts.size() == 1) return std::vector<glm::vec3>(N, pts[0]);
+        if ((int)pts.size() == N)
+            return pts;
+        if (pts.empty())
+            return std::vector<glm::vec3>(N, glm::vec3(0));
+        if (pts.size() == 1)
+            return std::vector<glm::vec3>(N, pts[0]);
 
         std::vector<glm::vec3> result;
         result.reserve(N);
@@ -1026,7 +813,7 @@ void GraphObject::alignPoints(GraphMathObject *target)
             for (int j = 1; j <= n_to_add; j++)
             {
                 float t = (float)j / (float)(n_to_add + 1);
-                result.push_back(glm::mix(pts[i], pts[i+1], t));
+                result.push_back(glm::mix(pts[i], pts[i + 1], t));
             }
         }
         result.push_back(pts.back());
@@ -1039,11 +826,13 @@ void GraphObject::alignPoints(GraphMathObject *target)
     int maxPaths = std::max((int)A_paths.size(), (int)B_paths.size());
 
     // Growth strategy: if one has fewer subpaths, they "grow" out of the last point
-    while ((int)A_paths.size() < maxPaths) {
+    while ((int)A_paths.size() < maxPaths)
+    {
         glm::vec3 p = A_paths.empty() ? glm::vec3(0) : A_paths.back().back();
         A_paths.push_back({p, p}); // Zero-length segment at the end
     }
-    while ((int)B_paths.size() < maxPaths) {
+    while ((int)B_paths.size() < maxPaths)
+    {
         glm::vec3 p = B_paths.empty() ? glm::vec3(0) : B_paths.back().back();
         B_paths.push_back({p, p});
     }
@@ -1077,130 +866,10 @@ void GraphObject::alignPoints(GraphMathObject *target)
     target->setStrokeData();
 }
 
-inline void showPoints(std::vector<glm::vec3> pts)
-{
-    for (auto p : pts)
-    {
-        std::cout << "(" << p.x << "," << p.y << "," << p.z << ") , ";
-    }
-    std::cout << std::endl;
-}
-
-inline void showRange(std::vector<std::pair<int, int>> ranges)
-{
-    for (auto r : ranges)
-    {
-        std::cout << "(" << r.first << "," << r.second << ") , ";
-    }
-    std::cout << std::endl;
-}
-
-/*
-std::cout << "point initialize" << std::endl;
-    std::cout << "first: " << std::endl;
-    showPoints(points);
-    std::cout << "range: " << std::endl;
-    showRange(point_sub_path_ranges);
-    std::cout << "second: " << std::endl;
-    showPoints(target->points);
-    std::cout << "range: " << std::endl;
-*/
-
-// void GraphObject::alignPoints(GraphMathObject *target)
-// {
-//     auto extract_subpaths = [](GraphMathObject *g)
-//     {
-//         std::vector<std::vector<glm::vec3>> result;
-
-//         for (auto &r : g->point_sub_path_ranges)
-//         {
-//             int start = r.first;
-//             int count = r.second;
-
-//             std::vector<glm::vec3> sub;
-//             sub.reserve(count);
-
-//             for (int i = 0; i < count; i++)
-//                 sub.push_back(g->points[start + i]);
-
-//             result.push_back(sub);
-//         }
-
-//         return result;
-//     };
-
-//     // std::cout << "point initialize" << std::endl;
-//     // std::cout << "first: " << std::endl;
-//     // showPoints(points);
-//     // std::cout << "range: " << std::endl;
-//     // showRange(point_sub_path_ranges);
-//     // std::cout << "second: " << std::endl;
-//     // showPoints(target->points);
-//     // std::cout << "range: " << std::endl;
-//     // showRange(target->point_sub_path_ranges);
-
-//     auto A = extract_subpaths(this);
-//     auto B = extract_subpaths(target);
-
-//     int S = A.size();
-//     int T = B.size();
-
-//     int M = std::max(S, T);
-
-//     std::vector<glm::vec3> newA;
-//     std::vector<glm::vec3> newB;
-
-//     std::vector<std::pair<int, int>> ranges;
-
-//     for (int i = 0; i < M; i++)
-//     {
-//         int ia = std::min(i, S - 1);
-//         int ib = std::min(i, T - 1);
-
-//         auto &sa = A[ia];
-//         auto &sb = B[ib];
-
-//         int sizeA = sa.size();
-//         int sizeB = sb.size();
-
-//         int target_size = std::max(sizeA, sizeB);
-
-//         auto sa_resampled = linearInterpolate(sa, target_size);
-//         auto sb_resampled = linearInterpolate(sb, target_size);
-
-//         int start = newA.size();
-
-//         newA.insert(newA.end(), sa_resampled.begin(), sa_resampled.end());
-//         newB.insert(newB.end(), sb_resampled.begin(), sb_resampled.end());
-
-//         ranges.push_back({start, target_size});
-//     }
-
-//     points = newA;
-//     point_sub_path_ranges = ranges;
-
-//     target->points = newB;
-//     target->point_sub_path_ranges = ranges;
-
-//     // std::cout << "point initialize second" << std::endl;
-//     // std::cout << "first: " << std::endl;
-//     // showPoints(points);
-//     // std::cout << "range: " << std::endl;
-//     // showRange(point_sub_path_ranges);
-//     // std::cout << "second: " << std::endl;
-//     // showPoints(target->points);
-//     // std::cout << "range: " << std::endl;
-//     // showRange(target->point_sub_path_ranges);
-//     target->setStrokeData();
-//     setStrokeData();
-
-//     this->applyColorToVertex();
-//         target->applyColorToVertex();
-// }
-
 void GraphObject::interpolate(const GraphMathObject *target, float t)
 {
-    if (points.size() != target->points.size()) {
+    if (points.size() != target->points.size())
+    {
         // Fallback or skip if sizes don't match (should be handled by alignPoints)
         return;
     }
@@ -1209,6 +878,18 @@ void GraphObject::interpolate(const GraphMathObject *target, float t)
         points[i] = glm::mix(points[i], target->points[i], t);
     }
     updateDimensions();
+}
+
+void GraphObject::become(GraphMathObject *target)
+{
+    if (!target->is_initialized)
+        target->Init();
+
+    this->points = target->points;
+    this->point_sub_path_ranges = target->point_sub_path_ranges;
+    this->stroke_colors = target->stroke_colors;
+    stroke_dirty = true;
+    InitStrokeData();
 }
 
 glm::vec3 GraphObject::getPosition(Position pos)
@@ -1298,7 +979,7 @@ void GraphObject::nextTo(GraphObject *target, Position pos, float buffer)
     case CENTER:
         position = getRelativePosition(position, Position::CENTER, glm::vec3(0, 0, 0));
         break;
-    case NONE: 
+    case NONE:
         position = getRelativePosition(position, Position::NONE, glm::vec3(x, y, 0));
         break;
     }
@@ -1386,8 +1067,8 @@ void GraphObject::build_points_from_bezier()
     {
         subdivide_bezier_curves();
         bezier_dirty = false;
-        stroke_dirty = true;
     }
+    stroke_dirty = true;
 }
 
 std::vector<glm::vec3> GraphObject::getAllBezierPoints()

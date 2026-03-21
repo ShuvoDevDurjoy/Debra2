@@ -1,5 +1,5 @@
 #include <GraphEngine/Core/GraphApp.hpp>
-#include <GraphEngine/Graphs/GraphObjects/Shapes/Text.hpp>
+#include <GraphEngine/Graphs/GraphObjects/Shapes/2D/Text.hpp>
 
 // FreeType loads the font at this pixel size:
 // glyph coordinates are in 1/64th-pixel units, so the full range is
@@ -12,6 +12,7 @@ struct DecomposeData {
     GraphMathObject* obj;
     float world_x;    // pen x in world coords (baseline-left origin)
     float world_y;    // pen y in world coords (baseline)
+    float world_z;    // pen z in world coords
     float unit_scale; // ft_unit → world unit factor = scale / (64 * BASE_PIXEL_SIZE)
 };
 
@@ -19,7 +20,7 @@ static int move_to(const FT_Vector* to, void* user) {
     auto data = (DecomposeData*)user;
     float wx = data->world_x + to->x * data->unit_scale;
     float wy = data->world_y + to->y * data->unit_scale;
-    data->obj->start_bezier_path(glm::vec3(wx, wy, 0));
+    data->obj->start_bezier_path(glm::vec3(wx, wy, data->world_z));
     return 0;
 }
 
@@ -27,7 +28,7 @@ static int line_to(const FT_Vector* to, void* user) {
     auto data = (DecomposeData*)user;
     float wx = data->world_x + to->x * data->unit_scale;
     float wy = data->world_y + to->y * data->unit_scale;
-    data->obj->add_line_to(glm::vec3(wx, wy, 0));
+    data->obj->add_line_to(glm::vec3(wx, wy, data->world_z));
     return 0;
 }
 
@@ -35,9 +36,9 @@ static int conic_to(const FT_Vector* control, const FT_Vector* to, void* user) {
     auto data = (DecomposeData*)user;
     data->obj->add_quadratic_bezier_curve_to(
         glm::vec3(data->world_x + control->x * data->unit_scale,
-                  data->world_y + control->y * data->unit_scale, 0),
+                  data->world_y + control->y * data->unit_scale, data->world_z),
         glm::vec3(data->world_x + to->x * data->unit_scale,
-                  data->world_y + to->y * data->unit_scale, 0));
+                  data->world_y + to->y * data->unit_scale, data->world_z));
     return 0;
 }
 
@@ -45,27 +46,34 @@ static int cubic_to(const FT_Vector* c1, const FT_Vector* c2, const FT_Vector* t
     auto data = (DecomposeData*)user;
     data->obj->add_cubic_bezier_curve_to(
         glm::vec3(data->world_x + c1->x * data->unit_scale,
-                  data->world_y + c1->y * data->unit_scale, 0),
+                  data->world_y + c1->y * data->unit_scale, data->world_z),
         glm::vec3(data->world_x + c2->x * data->unit_scale,
-                  data->world_y + c2->y * data->unit_scale, 0),
+                  data->world_y + c2->y * data->unit_scale, data->world_z),
         glm::vec3(data->world_x + to->x * data->unit_scale,
-                  data->world_y + to->y * data->unit_scale, 0));
+                  data->world_y + to->y * data->unit_scale, data->world_z));
     return 0;
 }
 
-Char::Char(char c, float x, float y, float scale) {
+Char::Char(char c, float x, float y, float z, float scale) 
+    : c(c), x(x), y(y), z(z), scale(scale)
+{
     this->adaptive_tolerance = 0.0005f;
     this->adaptive_max_depth = 10;
     this->adaptive_min_distance = 0.0001f;
-    generateBezierOutline(c, x, y, scale);
+    Init();
 }
 
-void Char::generateBezierOutline(char c, float x, float y, float scale) {
+void Char::generatePoints() {
+    generateBezierOutline(c, x, y, z, scale);
+    updateDimensions();
+}
+
+void Char::generateBezierOutline(char c, float x, float y, float z, float scale) {
     FT_Library ft;
     if (FT_Init_FreeType(&ft)) return;
 
     FT_Face face;
-    if (FT_New_Face(ft, FONT_FAMILY_PATH, 0, &face)) {
+    if (FT_New_Face(ft, (GraphApp::font_path).c_str(), 0, &face)) {
         FT_Done_FreeType(ft);
         return;
     }
@@ -95,35 +103,33 @@ void Char::generateBezierOutline(char c, float x, float y, float scale) {
     funcs.shift = 0;
     funcs.delta = 0;
 
-    DecomposeData data = { this, x, y, unit_scale };
+    DecomposeData data = { this, x, y, z, unit_scale };
     FT_Outline_Decompose(&face->glyph->outline, &funcs, &data);
 
     FT_Done_Face(face);
     FT_Done_FreeType(ft);
-    close_path();
+    // close_path();
     // Init(GraphObject::drawSize++);
     // build_points_from_bezier();
 
-    // Update the bounding box for this character in world units
-    if (!points.empty()) {
-        float minx = points[0].x, maxx = points[0].x;
-        float miny = points[0].y, maxy = points[0].y;
-        for (auto& p : points) {
-            minx = std::min(minx, p.x); maxx = std::max(maxx, p.x);
-            miny = std::min(miny, p.y); maxy = std::max(maxy, p.y);
-        }
-        setDimension(minx, maxx, miny, maxy);
-    }
+    // Dimension is now updated via updateDimensions() in generatePoints()
 }
 
-Text::Text(const std::string& textStr, float x, float y, float scale) {
+Text::Text(const std::string& textStr, float x, float y, float z, float scale)
+    : textStr(textStr), x(x), y(y), z(z), scale(scale)
+{
+    Init();
+}
+
+void Text::generatePoints() {
+    subGraphObjects.clear();
     float pen_x = x;
 
     // We need a FreeType face once to measure glyph advances for kerning.
     FT_Library ft;
     FT_Init_FreeType(&ft);
     FT_Face face;
-    FT_New_Face(ft, FONT_FAMILY_PATH, 0, &face);
+    FT_New_Face(ft, (GraphApp::font_path).c_str(), 0, &face);
     FT_Set_Pixel_Sizes(face, 0, static_cast<FT_UInt>(BASE_PIXEL_SIZE));
 
     float unit_scale = scale / (64.0f * BASE_PIXEL_SIZE);
@@ -135,8 +141,10 @@ Text::Text(const std::string& textStr, float x, float y, float scale) {
             pen_x += 0.25f * scale;
             continue;
         }
-        Char* ch = new Char(c, pen_x, y, scale);
-        ch->setStrokeWidth(1.0f);
+        Char* ch = new Char(c, pen_x, y, z, scale);
+        ch->setStrokeWidth(0.2f);
+        ch->showStroke = false;
+        ch->showFill = true;
         add(ch);
 
         if (!FT_Load_Char(face, c, FT_LOAD_NO_BITMAP)) {
@@ -147,4 +155,7 @@ Text::Text(const std::string& textStr, float x, float y, float scale) {
 
     FT_Done_Face(face);
     FT_Done_FreeType(ft);
+
+    // Update parent text dimensions
+    updateDimensions();
 }

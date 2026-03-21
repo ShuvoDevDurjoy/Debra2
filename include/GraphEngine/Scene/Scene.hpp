@@ -25,6 +25,7 @@ class Animation;
 class GraphObject;
 class GraphMathObject;
 class CameraAnimation;
+class Renderer;
 
 /**
  * Base Scene class handling common state and rendering.
@@ -44,14 +45,19 @@ protected:
     GraphApp *app;
     GLFWwindow *window;
     Camera *camera;
+    Renderer *renderer;
+
+    float f_width, f_height;
+    float x_radius, y_radius;
 
     friend class GraphApp;
     friend class ICameraAnimatable;
     friend class ManualControl;
     friend class CameraControl;
+    friend class GraphMathObject;
 
 protected:
-    Scene(int width = 1200, int height = 600);
+    Scene(int width = 1200, int height = 600, float xUnits = 14.22f);
     virtual ~Scene();
 
     static void frame_size_buffer_callback(GLFWwindow *, int, int);
@@ -84,7 +90,7 @@ class TwoDScene : public Scene, public TControlPolicy {
 public:
     using Scene::play;
 
-    TwoDScene(int width = 1200, int height = 600) : Scene(width, height) {
+    TwoDScene(int width = 1200, int height = 600, float xUnits = 14.22f) : Scene(width, height, xUnits) {
         camera->setPerspective(45.0f, (float)width/(float)height, 0.1f, 1000.0f);
     }
     virtual ~TwoDScene() = default;
@@ -95,7 +101,7 @@ class ThreeDScene : public Scene, public TControlPolicy {
 public:
     using Scene::play;
 
-    ThreeDScene(int width = 1200, int height = 600) : Scene(width, height) {
+    ThreeDScene(int width = 1200, int height = 600, float xUnits = 14.22f) : Scene(width, height, xUnits) {
         camera->setPerspective(45.0f, (float)width/(float)height, 0.1f, 1000.0f);
     }
     virtual ~ThreeDScene() = default;

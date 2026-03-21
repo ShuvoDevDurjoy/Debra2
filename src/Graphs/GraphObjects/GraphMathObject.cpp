@@ -4,7 +4,7 @@
 long long GraphMathObject::next_id = 0;
 
 GraphMathObject::GraphMathObject()
-    : id(next_id++), parent(nullptr), scene(nullptr), is_initialized(false), x(0), y(0), width(0), height(0)
+    : id(next_id++), parent(nullptr), scene(nullptr), is_initialized(false), x(0), y(0), z(0), width(0), height(0), depth(0), dim(nullptr)
 {
 }
 
@@ -98,34 +98,40 @@ void GraphMathObject::moveTo(glm::vec3 newPos)
 void GraphMathObject::moveTo(Position pos)
 {
     glm::vec3 translate = glm::vec3(0, 0, 0);
+    bool useScene = (scene != nullptr);
+    float x_rad = useScene ? scene->x_radius : width;
+    float y_rad = useScene ? scene->y_radius : height;
+    float current_x = useScene ? 0 : x;
+    float current_y = useScene ? 0 : y;
+
     switch (pos)
     {
     case Position::LEFT:
-        translate = glm::vec3(x - width, y, 0);
+        translate = glm::vec3(current_x - x_rad, current_y, 0);
         break;
     case Position::RIGHT:
-        translate = glm::vec3(x + width, y, 0);
+        translate = glm::vec3(current_x + x_rad, current_y, 0);
         break;
     case Position::TOP:
-        translate = glm::vec3(x, y + height, 0);
+        translate = glm::vec3(current_x, current_y + y_rad, 0);
         break;
     case Position::BOTTOM:
-        translate = glm::vec3(x, y - height, 0);
+        translate = glm::vec3(current_x, current_y - y_rad, 0);
         break;
     case Position::TOP_LEFT:
-        translate = glm::vec3(x - width, y + height, 0);
+        translate = glm::vec3(current_x - x_rad, current_y + y_rad, 0);
         break;
     case Position::TOP_RIGHT:
-        translate = glm::vec3(x + width, y + height, 0);
+        translate = glm::vec3(current_x + x_rad, current_y + y_rad, 0);
         break;
     case Position::BOTTOM_LEFT:
-        translate = glm::vec3(x - width, y - height, 0);
+        translate = glm::vec3(current_x - x_rad, current_y - y_rad, 0);
         break;
     case Position::BOTTOM_RIGHT:
-        translate = glm::vec3(x + width, y - height, 0);
+        translate = glm::vec3(current_x + x_rad, current_y - y_rad, 0);
         break;
     case Position::CENTER:
-        translate = glm::vec3(x + width / 2, y - height / 2, 0);
+        translate = glm::vec3(0, 0, 0);
         break;
     case Position::NONE: 
         translate = glm::vec3(x, y, 0);
@@ -459,18 +465,52 @@ void GraphMathObject::setAllBezierPoints(const std::vector<glm::vec3> &pts)
 }
 void GraphMathObject::updateDimensions()
 {
-    if (points.empty()) return;
     float minx = std::numeric_limits<float>::max(), maxX = -std::numeric_limits<float>::max();
     float minY = std::numeric_limits<float>::max(), maxY = -std::numeric_limits<float>::max();
-    for (const auto &p : points)
+    float minZ = std::numeric_limits<float>::max(), maxZ = -std::numeric_limits<float>::max();
+    bool hasData = false;
+
+    if (!points.empty())
     {
-        minx = std::min(minx, p.x);
-        maxX = std::max(maxX, p.x);
-        minY = std::min(minY, p.y);
-        maxY = std::max(maxY, p.y);
+        hasData = true;
+        for (const auto &p : points)
+        {
+            minx = std::min(minx, p.x);
+            maxX = std::max(maxX, p.x);
+            minY = std::min(minY, p.y);
+            maxY = std::max(maxY, p.y);
+            minZ = std::min(minZ, p.z);
+            maxZ = std::max(maxZ, p.z);
+        }
     }
+
+    for (auto child : subGraphObjects)
+    {
+        hasData = true;
+        float cMinX = child->x;
+        float cMaxX = child->x + child->width;
+        float cMinY = child->y - child->height;
+        float cMaxY = child->y;
+        float cMinZ = child->z;
+        float cMaxZ = child->z + child->depth;
+
+        minx = std::min(minx, cMinX);
+        maxX = std::max(maxX, cMaxX);
+        minY = std::min(minY, cMinY);
+        maxY = std::max(maxY, cMaxY);
+        minZ = std::min(minZ, cMinZ);
+        maxZ = std::max(maxZ, cMaxZ);
+    }
+
+    if (!hasData) return;
+
     x = minx;
     y = maxY;
+    z = minZ;
     width = maxX - minx;
     height = maxY - minY;
+    depth = maxZ - minZ;
+
+    if (dim) delete dim;
+    dim = new Dimension(minx, maxX, minY, maxY, minZ, maxZ);
 }
