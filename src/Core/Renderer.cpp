@@ -32,6 +32,16 @@ void Renderer::Draw(const std::vector<GraphMathObject*>& objects, Camera* camera
 
 void Renderer::renderGraphObjectFill(GraphObject* gObj, Camera* camera, float dt) {
     if (gObj->fillProgress <= 0.0f) return;
+    if (!gObj->fill_data_initialized)
+    {
+        gObj->InitFillData();
+        if (!gObj->fill_data_initialized) return;
+    }
+    if (!gObj->fill_data_initialized)
+    {
+        gObj->InitFillData();
+        if (!gObj->fill_data_initialized) return;
+    }
 
     glm::mat4 view = camera->getViewMatrix();
     glm::mat4 projection = camera->getProjectionMatrix();
@@ -108,6 +118,7 @@ void Renderer::renderGraphObjectStroke(GraphObject* gObj, Camera* camera, float 
     gObj->stroke_shader->setMat4("projection", projection);
 
     gObj->stroke_shader->setFloat("uProgress", gObj->progress);
+    gObj->stroke_shader->setInt("uSegmentCount", std::max(0, gObj->getStrokeVertexCount() / 3));
     gObj->stroke_shader->setInt("vertexCount", gObj->getSize());
     gObj->stroke_shader->setVec3("objectColor", 0.67f, 0.67f, 0.67f);
     gObj->stroke_shader->setVec3("lightColor", 1.0f, 0.8f, 0.8f);
@@ -117,13 +128,26 @@ void Renderer::renderGraphObjectStroke(GraphObject* gObj, Camera* camera, float 
     gObj->stroke_shader->setFloat("u_stroke_opacity", gObj->stroke_opacity);
     gObj->stroke_shader->setFloat("u_radius", 2.0f);
     gObj->stroke_shader->setVec2("uViewportSize", (float)GraphApp::window_width, (float)GraphApp::window_height);
+    gObj->stroke_shader->setFloat("uAntiAliasWidth", 1.0f);
     gObj->stroke_shader->setFloat("u_line_width", gObj->line_width);
     gObj->stroke_shader->setFloat("uv_anti_alias_width_pass", 1.0f);
     gObj->stroke_shader->setFloat("user_bezier_always", gObj->use_bezier_always ? 1.0f : 0.0f);
     gObj->stroke_shader->setInt("u_layer", gObj->layer);
 
     gObj->stroke_shader->setFloat("uMiterLimit", gObj->miter_limit);
-    gObj->stroke_shader->setInt("uStrokeJoinStyle", static_cast<int>(gObj->stroke_join_style));
+    int manim_join_style = 3;
+    switch (gObj->stroke_join_style) {
+        case GraphMathObject::StrokeJoinStyle::MITER:
+            manim_join_style = 3;
+            break;
+        case GraphMathObject::StrokeJoinStyle::BEVEL:
+            manim_join_style = 2;
+            break;
+        case GraphMathObject::StrokeJoinStyle::ROUND:
+            manim_join_style = 1;
+            break;
+    }
+    gObj->stroke_shader->setInt("uStrokeJoinStyle", manim_join_style);
 
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);

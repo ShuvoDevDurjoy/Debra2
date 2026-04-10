@@ -23,7 +23,7 @@ public:
     static int window_width;
     static int window_height;
     static float xUnits;
-    GLFWwindow *window;
+    GLFWwindow *window = nullptr;
     
     public:
     static int drawCount;

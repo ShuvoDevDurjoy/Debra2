@@ -48,53 +48,34 @@ void GraphObject::drawStroke(float dt)
 
     glBindVertexArray(StrokeVAO);
 
-    if (!point_sub_path_ranges.empty())
+    if (!stroke_draw_ranges.empty())
     {
         std::vector<GLint> firsts;
         std::vector<GLsizei> counts;
-        firsts.reserve(point_sub_path_ranges.size());
-        counts.reserve(point_sub_path_ranges.size());
-        for (const auto &[first, count] : point_sub_path_ranges)
+        firsts.reserve(stroke_draw_ranges.size());
+        counts.reserve(stroke_draw_ranges.size());
+        for (const auto &[first, count] : stroke_draw_ranges)
         {
             firsts.push_back(static_cast<GLint>(first));
             counts.push_back(static_cast<GLsizei>(count));
         }
 
-        glMultiDrawArrays(GL_LINE_STRIP,
+        glMultiDrawArrays(GL_TRIANGLES,
                           firsts.data(),
                           counts.data(),
                           static_cast<GLsizei>(firsts.size()));
     }
     else
     {
-        // Single continuous path (or non-bezier path)
-        glDrawArrays(GL_LINE_STRIP, drawStart, getSize());
+        glDrawArrays(GL_TRIANGLES, 0, getStrokeVertexCount());
     }
 }
 
 void GraphObject::drawFill(float dt)
 {
-    glBindVertexArray(StrokeVAO);
-    if (!point_sub_path_ranges.empty())
-    {
-        std::vector<GLint> firsts;
-        std::vector<GLsizei> counts;
-        firsts.reserve(point_sub_path_ranges.size());
-        counts.reserve(point_sub_path_ranges.size());
-        for (const auto &[first, count] : point_sub_path_ranges)
-        {
-            firsts.push_back(static_cast<GLint>(first));
-            counts.push_back(static_cast<GLsizei>(count));
-        }
-        glMultiDrawArrays(GL_TRIANGLE_FAN,
-                          firsts.data(),
-                          counts.data(),
-                          static_cast<GLsizei>(firsts.size()));
-    }
-    else
-    {
-        glDrawArrays(GL_TRIANGLE_FAN, 0, (GLsizei)getSize());
-    }
+    if (!fill_data_initialized) return;
+    glBindVertexArray(FillVAO);
+    glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(getFillSize()));
 }
 
 void GraphObject::Init()
@@ -107,8 +88,8 @@ void GraphObject::Init()
 
     glGenVertexArrays(1, &FillVAO);
     glGenBuffers(1, &FillVBO);
-    glGenVertexArrays(1, &FillVAO);
-    glGenBuffers(1, &FillVBO);
+    glGenVertexArrays(1, &CoverVAO);
+    glGenBuffers(1, &CoverVBO);
 
     // Initialize OpenGL Buffer and Array
     glGenVertexArrays(1, &StrokeVAO);
@@ -120,6 +101,10 @@ void GraphObject::Init()
         build_points_from_bezier();
     }
     InitStrokeData();
+    if (showFill)
+    {
+        InitFillData();
+    }
     InitSubObject();
     // initialize the stroke data
     resolution = getSize() - 1;
@@ -132,8 +117,8 @@ void GraphObject::InitStrokeData()
 {
     if (stroke_dirty)
     {
-        setStrokeData();
         applyColorToVertex();
+        setStrokeData();
         glBindVertexArray(StrokeVAO);
         glBindBuffer(GL_ARRAY_BUFFER, StrokeVBO);
         uploadStrokeDataToShader();
@@ -143,11 +128,19 @@ void GraphObject::InitStrokeData()
 
 void GraphObject::InitFillData()
 {
+    if (points.size() < 2)
+    {
+        fill_data_initialized = false;
+        current_fill_points.clear();
+        return;
+    }
+
     setFillData();
     glBindVertexArray(FillVAO);
     glBindBuffer(GL_ARRAY_BUFFER, FillVBO);
     initializeFillShader();
     uploadFillDataToShader();
+    fill_data_initialized = true;
 }
 
 void GraphObject::initializeStrokeShader()
@@ -183,77 +176,218 @@ void GraphObject::InitSubObject()
 
 void GraphObject::setStrokeData()
 {
-    if (points.empty())
-        return;
+    const std::vector<glm::vec3> path_colors = stroke_color_array;
 
+    stroke_points.clear();
     stroke_current_points.clear();
     stroke_prev_points.clear();
     stroke_next_points.clear();
+    stroke_unit_normals.clear();
+    stroke_width_array.clear();
+    stroke_draw_ranges.clear();
+    stroke_opacity_array.clear();
 
-    // If no sub-path ranges were defined (e.g., not a bezier path),
-    // treat the whole thing as one range.
-    if (point_sub_path_ranges.empty())
+    if (points.size() < 2)
     {
-        point_sub_path_ranges.push_back({0, (int)points.size()});
+        stroke_data_initialized = false;
+        stroke_dirty = false;
+        return;
     }
 
-    std::vector<glm::vec3> dup;
-    std::vector<std::pair<int, int>> ranges;
-    for (const auto &range : point_sub_path_ranges)
+    auto get_path_color = [&](float t) -> glm::vec3
     {
-        int start = range.first;
-        int count = range.second;
-        int end = start + count - 1;
+        if (path_colors.empty())
+            return glm::vec3(1.0f);
+        if (path_colors.size() == 1)
+            return path_colors.front();
 
-        int range_start = dup.size();
+        t = glm::clamp(t, 0.0f, 1.0f);
+        const float scaled = t * float(path_colors.size() - 1);
+        const int index0 = glm::clamp(int(std::floor(scaled)), 0, int(path_colors.size()) - 1);
+        const int index1 = glm::clamp(index0 + 1, 0, int(path_colors.size()) - 1);
+        const float local_t = scaled - float(index0);
+        return glm::mix(path_colors[index0], path_colors[index1], local_t);
+    };
 
-        bool isClosed = false;
-        if (count > 2 && isEqual(points[start], points[end]))
+    if (is_bezier_path && bezier_points.size() >= 4)
+    {
+        struct QuadraticSegment
         {
-            isClosed = true;
+            std::array<glm::vec3, 3> points;
+        };
+
+        std::vector<int> sub_starts = {0};
+        for (int idx : bezier_sub_path_starts)
+        {
+            if (idx > 0 && idx < static_cast<int>(bezier_points.size()))
+                sub_starts.push_back(idx);
+        }
+        std::sort(sub_starts.begin(), sub_starts.end());
+        sub_starts.erase(std::unique(sub_starts.begin(), sub_starts.end()), sub_starts.end());
+        sub_starts.push_back(static_cast<int>(bezier_points.size()));
+
+        int total_quadratic_segments = 0;
+        for (int s = 0; s + 1 < static_cast<int>(sub_starts.size()); ++s)
+        {
+            const int beg = sub_starts[s];
+            const int end = sub_starts[s + 1];
+            total_quadratic_segments += std::max(0, (end - beg - 1) / 3) * 2;
         }
 
-        for (int i = start; i <= end; ++i)
+        int segment_cursor = 0;
+        const int segment_denominator = std::max(1, total_quadratic_segments);
+
+        for (int s = 0; s + 1 < static_cast<int>(sub_starts.size()); ++s)
         {
-            // 1. Current Point
+            const int beg = sub_starts[s];
+            const int end = sub_starts[s + 1];
+            if (end - beg < 4)
+                continue;
 
-            // 2. Previous Point: If at start of sub-path, and closed, wrap around to point before end
-            if (i == start)
+            std::vector<QuadraticSegment> sub_segments;
+            sub_segments.reserve(std::max(0, (end - beg - 1) / 3) * 2);
+
+            for (int i = beg + 1; i + 2 < end; i += 3)
             {
-                if (isClosed)
-                {
-                    dup.push_back(points[end - 1]);
-                }
-                else
-                {
-                    dup.push_back(points[i]);
-                }
+                const glm::vec3 &a0 = bezier_points[i - 1];
+                const glm::vec3 &h0 = bezier_points[i];
+                const glm::vec3 &h1 = bezier_points[i + 1];
+                const glm::vec3 &a1 = bezier_points[i + 2];
+
+                const glm::vec3 m0 = 0.25f * (3.0f * h0 + a0);
+                const glm::vec3 m1 = 0.25f * (3.0f * h1 + a1);
+                const glm::vec3 k = 0.5f * (m0 + m1);
+
+                sub_segments.push_back({{a0, m0, k}});
+                sub_segments.push_back({{k, m1, a1}});
             }
 
-            dup.push_back(points[i]);
+            if (sub_segments.empty())
+                continue;
 
-            // 3. Next Point: If at end of sub-path, and closed, wrap around to point after start
-            if (i == end)
+            const int range_vertex_start = static_cast<int>(stroke_current_points.size());
+            for (int segment = 0; segment < static_cast<int>(sub_segments.size()); ++segment)
             {
-                if (isClosed)
+                const auto &current_segment = sub_segments[segment].points;
+                const auto &prev_segment = (segment > 0) ? sub_segments[segment - 1].points : current_segment;
+                const auto &next_segment = (segment + 1 < static_cast<int>(sub_segments.size()))
+                                               ? sub_segments[segment + 1].points
+                                               : current_segment;
+
+                const float t0 = float(segment_cursor) / float(segment_denominator);
+                const float t1 = float(segment_cursor + 1) / float(segment_denominator);
+                const std::array<float, 3> color_t = {t0, 0.5f * (t0 + t1), t1};
+
+                for (int i = 0; i < 3; ++i)
                 {
-                    dup.push_back(points[start + 1]);
+                    stroke_points.push_back(current_segment[i]);
+                    stroke_current_points.push_back(current_segment[i]);
+                    stroke_prev_points.push_back(prev_segment[i]);
+                    stroke_next_points.push_back(next_segment[i]);
+                    stroke_unit_normals.push_back(glm::vec3(0.0f, 0.0f, 1.0f));
+                    stroke_width_array.push_back(line_width);
+                    stroke_color_array.push_back(get_path_color(color_t[i]));
+                    stroke_opacity_array.push_back(stroke_opacity);
                 }
-                else
-                {
-                    dup.push_back(points[i]);
-                }
+
+                ++segment_cursor;
             }
+
+            stroke_draw_ranges.push_back({range_vertex_start, static_cast<int>(sub_segments.size()) * 3});
         }
 
-        ranges.push_back({range_start, count});
+        stroke_data_initialized = !stroke_current_points.empty();
+        stroke_dirty = false;
+        return;
     }
 
-    points = dup;
-    point_sub_path_ranges = ranges;
+    std::vector<std::pair<int, int>> path_ranges = point_sub_path_ranges;
+    if (path_ranges.empty())
+    {
+        path_ranges.push_back({0, static_cast<int>(points.size())});
+    }
 
+    auto build_segment = [&](const glm::vec3 &a, const glm::vec3 &b) -> std::array<glm::vec3, 3>
+    {
+        return {a, 0.5f * (a + b), b};
+    };
+
+    const int point_count = static_cast<int>(points.size());
+
+    for (const auto &[raw_start, raw_count] : path_ranges)
+    {
+        int start = std::max(0, raw_start);
+        if (start >= point_count)
+            continue;
+
+        int count = std::max(0, raw_count);
+        count = std::min(count, point_count - start);
+        if (count < 2)
+            continue;
+
+        const int end = start + count - 1;
+        const bool is_closed = (count > 2) && isEqual(points[start], points[end]);
+        const int unique_count = is_closed ? (count - 1) : count;
+        const int segment_count = is_closed ? unique_count : (unique_count - 1);
+        if (segment_count <= 0)
+            continue;
+
+        const int range_vertex_start = static_cast<int>(stroke_current_points.size());
+
+        for (int segment = 0; segment < segment_count; ++segment)
+        {
+            const int a_index = start + segment;
+            const int b_index = start + ((segment + 1) % unique_count);
+
+            const glm::vec3 &a = points[a_index];
+            const glm::vec3 &b = points[b_index];
+            auto current_segment = build_segment(a, b);
+
+            std::array<glm::vec3, 3> prev_segment = current_segment;
+            std::array<glm::vec3, 3> next_segment = current_segment;
+
+            const bool has_prev = is_closed || (segment > 0);
+            const bool has_next = is_closed || (segment + 1 < segment_count);
+
+            if (has_prev)
+            {
+                const int prev_segment_index = is_closed ? ((segment - 1 + segment_count) % segment_count) : (segment - 1);
+                const int prev_a_index = start + prev_segment_index;
+                const int prev_b_index = start + ((prev_segment_index + 1) % unique_count);
+                prev_segment = build_segment(points[prev_a_index], points[prev_b_index]);
+            }
+
+            if (has_next)
+            {
+                const int next_segment_index = is_closed ? ((segment + 1) % segment_count) : (segment + 1);
+                const int next_a_index = start + next_segment_index;
+                const int next_b_index = start + ((next_segment_index + 1) % unique_count);
+                next_segment = build_segment(points[next_a_index], points[next_b_index]);
+            }
+
+            const glm::vec3 color_a = get_path_color(float(a_index) / float(std::max(1, point_count - 1)));
+            const glm::vec3 color_b = get_path_color(float(b_index) / float(std::max(1, point_count - 1)));
+            const glm::vec3 color_mid = 0.5f * (color_a + color_b);
+            const std::array<glm::vec3, 3> segment_colors = {color_a, color_mid, color_b};
+
+            for (int i = 0; i < 3; ++i)
+            {
+                stroke_points.push_back(current_segment[i]);
+                stroke_current_points.push_back(current_segment[i]);
+                stroke_prev_points.push_back(prev_segment[i]);
+                stroke_next_points.push_back(next_segment[i]);
+                stroke_unit_normals.push_back(glm::vec3(0.0f, 0.0f, 1.0f));
+                stroke_width_array.push_back(line_width);
+                stroke_color_array.push_back(segment_colors[i]);
+                stroke_opacity_array.push_back(stroke_opacity);
+            }
+        }
+
+        stroke_draw_ranges.push_back({range_vertex_start, segment_count * 3});
+    }
+
+    stroke_data_initialized = !stroke_current_points.empty();
     stroke_dirty = false;
-    updateDimensions();
 }
 
 inline bool intersectSegments(const glm::vec2 &p1, const glm::vec2 &p2,
@@ -339,6 +473,12 @@ inline std::vector<Polygonn> buildFillPolygons(
 
 void GraphObject::setFillData()
 {
+    if (points.size() < 2)
+    {
+        current_fill_points.clear();
+        return;
+    }
+
     // Generate fine points from bezier curves to get a perfectly curved fill
     if (is_bezier_path)
     {
@@ -353,6 +493,12 @@ void GraphObject::setFillData()
     for (int i = 0; i < (int)points.size(); ++i)
     {
         curve.push_back({points[i].x, points[i].y});
+    }
+
+    if (curve.size() < 2)
+    {
+        current_fill_points.clear();
+        return;
     }
 
     auto polygons = buildFillPolygons(curve, 0.0f);
@@ -375,34 +521,39 @@ void GraphObject::setFillData()
 void GraphObject::applyColorToVertex()
 {
     int n = getPointsSize();
-    stroke_color_array.resize(n);
+    stroke_color_array.clear();
+    stroke_color_array.resize(n, glm::vec3(1.0f));
 
-    // std::cout << "Graph Color size is: " << colors.size() << std::endl;
+    if (n <= 0)
+        return;
 
     if (colors.empty())
     {
-        colors = {
-            GraphColor()};
+        colors.push_back(GraphColor());
     }
 
-    int segments = colors.size() - 1;
+    if (colors.size() == 1 || n == 1)
+    {
+        const auto &c = colors.front();
+        std::fill(stroke_color_array.begin(), stroke_color_array.end(), glm::vec3(c.RED, c.GREEN, c.BLUE));
+        return;
+    }
 
+    const int segments = static_cast<int>(colors.size()) - 1;
     for (int i = 0; i < n; ++i)
     {
-        float t = float(i) / float(n - 1); // 0 → 1 across vertices
-
-        float segmentF = t * segments;
-        int segment = std::min(int(segmentF), segments - 1);
-
-        float localT = segmentF - segment;
+        const float t = (n == 1) ? 0.0f : (float(i) / float(n - 1));
+        const float segment_f = t * segments;
+        const int segment = glm::clamp(static_cast<int>(std::floor(segment_f)), 0, segments - 1);
+        const float local_t = segment_f - float(segment);
 
         const auto &c0 = colors[segment];
         const auto &c1 = colors[segment + 1];
 
         stroke_color_array[i] = glm::vec3(
-            glm::mix(c0.RED, c1.RED, localT),
-            glm::mix(c0.GREEN, c1.GREEN, localT),
-            glm::mix(c0.BLUE, c1.BLUE, localT));
+            glm::mix(c0.RED, c1.RED, local_t),
+            glm::mix(c0.GREEN, c1.GREEN, local_t),
+            glm::mix(c0.BLUE, c1.BLUE, local_t));
     }
 
     // std::cout << "Graph size: " << getPointsSize() << std::endl;
@@ -459,54 +610,69 @@ void GraphObject::makeSmooth()
 
 void GraphObject::UpdateGraphWithFunction(float dt)
 {
-    stroke_current_points.clear();
-    stroke_prev_points.clear();
-    stroke_next_points.clear();
-
     applyUpdaterFunction(dt);
-    setStrokeData();
+    stroke_dirty = true;
+    InitStrokeData();
 
     drawSize = getSize();
     drawStart = 0;
 
-    glBindBuffer(GL_ARRAY_BUFFER, StrokeVBO);
-
-    size_t buffer_size = getSize() * sizeof(glm::vec3);
-
-    glBufferSubData(GL_ARRAY_BUFFER, 0, buffer_size, stroke_current_points.data());
-    glBufferSubData(GL_ARRAY_BUFFER, buffer_size, buffer_size, stroke_prev_points.data());
-    glBufferSubData(GL_ARRAY_BUFFER, 2 * buffer_size, buffer_size, stroke_next_points.data());
-
     setFillData();
-    glBindBuffer(GL_ARRAY_BUFFER, FillVBO);
-    glBufferSubData(GL_ARRAY_BUFFER, 0, getFillSize() * sizeof(glm::vec3), current_fill_points.data());
+    uploadFillDataToShader();
 }
 
 void GraphObject::uploadStrokeDataToShader()
 {
-
-    size_t buffer_size = getPointsSize() * sizeof(glm::vec3);
-    if (StrokeVAO == 0)
+    if (StrokeVAO == 0 || stroke_current_points.empty())
         return;
+
+    const size_t current_size = stroke_current_points.size() * sizeof(glm::vec3);
+    const size_t prev_size = stroke_prev_points.size() * sizeof(glm::vec3);
+    const size_t next_size = stroke_next_points.size() * sizeof(glm::vec3);
+    const size_t normal_size = stroke_unit_normals.size() * sizeof(glm::vec3);
+    const size_t width_size = stroke_width_array.size() * sizeof(float);
+    const size_t color_size = stroke_color_array.size() * sizeof(glm::vec3);
+    const size_t opacity_size = stroke_opacity_array.size() * sizeof(float);
+    const size_t total_size = current_size + prev_size + next_size + normal_size + width_size + color_size + opacity_size;
+
     glBindVertexArray(StrokeVAO);
     glBindBuffer(GL_ARRAY_BUFFER, StrokeVBO);
+    glBufferData(GL_ARRAY_BUFFER, total_size, nullptr, GL_DYNAMIC_DRAW);
 
-    // std::cout << "setting buffer size: " << buffer_size * 2 << std::endl;
-    // std::cout << "Stroke color size: " << stroke_color_array.size() << std::endl;
-    // std::cout << "Stroke color size: " << points.size() << std::endl;
-    glBufferData(GL_ARRAY_BUFFER, 2 * buffer_size, NULL, GL_DYNAMIC_DRAW);
-
-    glBufferSubData(GL_ARRAY_BUFFER, 0, buffer_size, points.data());
-    glBufferSubData(GL_ARRAY_BUFFER, buffer_size, buffer_size, stroke_color_array.data());
-
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void *)(sizeof(glm::vec3)));
+    size_t offset = 0;
+    glBufferSubData(GL_ARRAY_BUFFER, offset, current_size, stroke_current_points.data());
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), reinterpret_cast<void *>(offset));
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void *)(0));
+
+    offset += current_size;
+    glBufferSubData(GL_ARRAY_BUFFER, offset, prev_size, stroke_prev_points.data());
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), reinterpret_cast<void *>(offset));
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void *)(2 * sizeof(glm::vec3)));
+
+    offset += prev_size;
+    glBufferSubData(GL_ARRAY_BUFFER, offset, next_size, stroke_next_points.data());
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), reinterpret_cast<void *>(offset));
     glEnableVertexAttribArray(2);
-    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void *)(buffer_size));
+
+    offset += next_size;
+    glBufferSubData(GL_ARRAY_BUFFER, offset, normal_size, stroke_unit_normals.data());
+    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), reinterpret_cast<void *>(offset));
     glEnableVertexAttribArray(3);
+
+    offset += normal_size;
+    glBufferSubData(GL_ARRAY_BUFFER, offset, width_size, stroke_width_array.data());
+    glVertexAttribPointer(4, 1, GL_FLOAT, GL_FALSE, sizeof(float), reinterpret_cast<void *>(offset));
+    glEnableVertexAttribArray(4);
+
+    offset += width_size;
+    glBufferSubData(GL_ARRAY_BUFFER, offset, color_size, stroke_color_array.data());
+    glVertexAttribPointer(5, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), reinterpret_cast<void *>(offset));
+    glEnableVertexAttribArray(5);
+
+    offset += color_size;
+    glBufferSubData(GL_ARRAY_BUFFER, offset, opacity_size, stroke_opacity_array.data());
+    glVertexAttribPointer(6, 1, GL_FLOAT, GL_FALSE, sizeof(float), reinterpret_cast<void *>(offset));
+    glEnableVertexAttribArray(6);
 
     stroke_data_initialized = true;
 }
@@ -627,6 +793,7 @@ void GraphObject::updatePoints()
     scale_x = scale_y = scale_z = 1.0f;
     rotation_vec = glm::vec3(0);
 
+    applyColorToVertex();
     setStrokeData();
     uploadStrokeDataToShader();
     // uploadFillDataToShader();

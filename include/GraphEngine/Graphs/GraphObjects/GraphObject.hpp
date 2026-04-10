@@ -4,6 +4,7 @@
 #include <cmath>
 #include <limits>
 #include <vector>
+#include <array>
 #include <stdlib.h>
 #include <iostream>
 #include <algorithm>
@@ -69,10 +70,15 @@ public:
     std::vector<GraphColor> stroke_colors;
     std::vector<GraphColor> fill_colors;
     // contains points to draw a stroke
+    std::vector<glm::vec3> stroke_points;
     std::vector<glm::vec3> stroke_prev_points;
     std::vector<glm::vec3> stroke_current_points;
     std::vector<glm::vec3> stroke_next_points;
+    std::vector<glm::vec3> stroke_unit_normals;
+    std::vector<float> stroke_width_array;
     std::vector<glm::vec3> stroke_color_array;
+    std::vector<float> stroke_opacity_array;
+    std::vector<std::pair<int, int>> stroke_draw_ranges;
 
     // contains points to draw the fill
     std::vector<glm::vec3> current_fill_points;
@@ -194,6 +200,11 @@ public:
 
     int getFillSize(){
         return current_fill_points.size();
+    }
+
+    int getStrokeVertexCount() const
+    {
+        return static_cast<int>(stroke_current_points.size());
     }
 
     void setDrawStart(int index)

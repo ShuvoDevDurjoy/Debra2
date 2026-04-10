@@ -172,28 +172,33 @@ class Demo3DScene : public TwoDScene<ManualControl> {
 public:
     Demo3DScene() : TwoDScene<ManualControl>(1200, 600, 50.0f) {
         // 1. Circle with new constructor
-        Circle *c1 = new Circle(4, 0, 0, 0);
+        Circle *c1 = new Circle(8, 0, 0, 0);
         c1->setColor({GraphColor(1, 0, 0)});
-        // c1->setStrokeWidth(10.0f);
+        c1->setStrokeWidth(100.0f);
+        c1->showFill = false;
         add(c1);
 
-        Rectangle *rect = new Rectangle(10, 10, 0, 0);
-        rect->setStrokeWidth(10.0f);
-        rect->setColor({GraphColor(1, 0, 0), GraphColor(0, 1, 0)});
+        Rectangle *rect = new Rectangle(20, 10, 0, 0);
+        rect->setStrokeWidth(20.0f);
         add(rect);
+        FunctionGraph *sin_graph = new FunctionGraph(sinGraph, {-50.0f, 50.0f, 1.0f});
+        // add(sin_graph);
 
-        NumberLine *num_line = new NumberLine(-25, 25, 5, 2, 0);
-        add(num_line);
+        std::cout << "point size: " << c1->getPointsSize() << std::endl;
 
-        Dot *dot = new Dot(0.2f);
-        dot->showStroke = true;
-        c1->showFill = true;
-        add(dot);
+        // for(auto &p: sin_graph->stroke_points){
+        //     Dot *d = new Dot(0.2f, p.x, p.y, p.z);
+        //     d->showStroke = true;
+        //     d->showFill = false;
+        //     add(d);
+        // }
 
-        std::vector<std::vector<glm::vec3>> pp = {{glm::vec3(-10, -10, 0), glm::vec3(10, 10, 0), glm::vec3(10, -10, 0), glm::vec3(-10, -10, 0)}};
+            Polygon* poly = new Polygon({
+                {glm::vec3(-20, 0, 0), glm::vec3(-10, 10, 0), glm::vec3(0, 0, 0)},
+                {glm::vec3(10, 0, 0), glm::vec3(20, 10, 0), glm::vec3(30, 0, 0)}
+            });
 
-        Polygon *poly = new Polygon(pp, true);
-        add(poly);
+            add(poly);
     }
 };
 int main(){

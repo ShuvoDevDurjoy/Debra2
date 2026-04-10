@@ -88,7 +88,11 @@ void Scene::register_object(GraphMathObject *obj)
     if (it == flat_scene_registry.end())
     {
         flat_scene_registry.push_back(obj);
-        if (!obj->is_initialized) obj->Init();
+        // OpenGL objects can only be initialized when a valid context exists.
+        if (window != nullptr && !obj->is_initialized)
+        {
+            obj->Init();
+        }
     }
 }
 

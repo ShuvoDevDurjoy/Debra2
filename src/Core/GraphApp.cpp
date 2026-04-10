@@ -13,8 +13,18 @@ GraphApp::GraphApp(int width, int height, float xUnits)
     window_width = width;
     window_height = height;
     GraphApp::xUnits = xUnits;
-    InitWindow();
-    loadGLAD();
+    if (InitWindow() != 0)
+    {
+        isAlive = false;
+        return;
+    }
+
+    if (loadGLAD() != 0)
+    {
+        isAlive = false;
+        return;
+    }
+
     process_input();
     setCallback();
 }
@@ -124,11 +134,13 @@ void GraphApp::mouseClickCallback(GLFWwindow *window, int button, int action, in
 
 void GraphApp::process_input()
 {
+    if (!window) return;
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 }
 void GraphApp::setCallback()
 {
+    if (!window) return;
     // callback for frame buffer size
     glfwSetFramebufferSizeCallback(window, frame_buffer_size_callback);
     glfwSetCursorPosCallback(window, mouseMoveCallback);
@@ -142,6 +154,7 @@ bool GraphApp::isAlive = true;
 
 void GraphApp::mainLoop(Scene *graph)
 {
+    if (!window || !graph) return;
     currentGraph = graph;
     glfwSwapInterval(1); // Enable V-Sync
     // glEnable(GL_DEPTH_TEST);
@@ -166,12 +179,29 @@ void GraphApp::mainLoop(Scene *graph)
 
 void GraphApp::cleanUp(Scene *graph)
 {
-    delete graph;
-    glfwTerminate();
+    if (graph)
+    {
+        delete graph;
+    }
+    if (window)
+    {
+        glfwTerminate();
+    }
 }
 
 void GraphApp::run(Scene *graph)
 {
+    if (!graph)
+    {
+        return;
+    }
+
+    if (!isAlive || !window)
+    {
+        delete graph;
+        return;
+    }
+
     mainLoop(graph);
     cleanUp(graph);
 }
